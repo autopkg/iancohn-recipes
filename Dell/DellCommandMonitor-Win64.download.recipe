@@ -43,6 +43,10 @@
 		</dict>
 		<dict>
 			<key>Processor</key>
+			<string>EndOfCheckPhase</string>
+		</dict>
+		<dict>
+			<key>Processor</key>
 			<string>com.github.iancohn.SharedProcessors/VirusTotalAnalyzerV3</string>
 			<key>Arguments</key>
 			<dict>
