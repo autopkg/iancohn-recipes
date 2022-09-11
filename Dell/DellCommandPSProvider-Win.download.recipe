@@ -183,7 +183,7 @@
 					</dict>
 				</dict>
 			</dict>
-		</dict>		
+		</dict>
 		<dict>
 			<key>Processor</key>
 			<string>EndOfCheckPhase</string>

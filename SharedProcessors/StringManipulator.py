@@ -39,7 +39,7 @@ SCHEMA = {
         {"$ref": "#/$defs/action"}
     ],
     "properties":{
-        
+
     },
     "$defs": {
         "action": {
