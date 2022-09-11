@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 #
 # Copyright 2022 Ian Cohn
 # https://www.github.com/iancohn
