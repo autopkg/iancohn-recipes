@@ -30,89 +30,89 @@ ACTION_TYPE_OPTIONS = [
 
 """
 SCHEMA = {
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://example.com/tree",
-	"$dynamicAnchor": "node",
-	"type": "array",
-	"prefixItems": [
-		{"$ref": "#/$defs/action"}
-	],
-	"properties":{
-		
-	},
-	"$defs": {
-		"action": {
-			"type": "object",
-			"properties": {
-				"action_type": {
-					"$ref": "#/action_type"
-				},
-				"action_input_var": {
-					"type": "string"
-				},
-				"action_output_var": {
-					"type": "string"
-				},
-				"options": {
-					"oneOf":[
-						{
-							"$ref": "#/replace_options"
-						},
-						{
-							"$ref": "#/split_options"
-						}
-					]
-				}
-			},
-			"required":[
-				"action_type",
-				"options"
-			],
-			"additionalProperties": False
-		},
-		"replace_options": 1,
-		"action_type": {
-			"enum": [
-				"replace",
-				"split",
-				"loop",
-				"concatenate",
-				"match",
-				"retrieve_url",
-				"format"
-			],
-			"type": "string"
-		},
-		"options": {
-			"type": "object"
-		}
-	}
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://example.com/tree",
+    "$dynamicAnchor": "node",
+    "type": "array",
+    "prefixItems": [
+        {"$ref": "#/$defs/action"}
+    ],
+    "properties":{
+        
+    },
+    "$defs": {
+        "action": {
+            "type": "object",
+            "properties": {
+                "action_type": {
+                    "$ref": "#/action_type"
+                },
+                "action_input_var": {
+                    "type": "string"
+                },
+                "action_output_var": {
+                    "type": "string"
+                },
+                "options": {
+                    "oneOf":[
+                        {
+                            "$ref": "#/replace_options"
+                        },
+                        {
+                            "$ref": "#/split_options"
+                        }
+                    ]
+                }
+            },
+            "required":[
+                "action_type",
+                "options"
+            ],
+            "additionalProperties": False
+        },
+        "replace_options": 1,
+        "action_type": {
+            "enum": [
+                "replace",
+                "split",
+                "loop",
+                "concatenate",
+                "match",
+                "retrieve_url",
+                "format"
+            ],
+            "type": "string"
+        },
+        "options": {
+            "type": "object"
+        }
+    }
 }
 
 
 OBJECT_SCHEMA_DESCRIPTIONS = {
-	"action": {
-		"action_type": "replace",#enum
-		"action_input_var": "var",#string
-		"action_output_var": "var",#string
-		"options": {
-			#options object schema depends on action_type enum value
-		}
-	},
-	"replace_arguments": {
-		"replacements": [
-			{
-				"find_text": "a string to find",
-				"replace_text": "replace it with this.",
-				"replace_all": True
-			},
-			{
-				"find_text": "a string to find",
-				"replace_text": "replace it with this.",
-				"replace_all": True
-			}
-		]
-	}
+    "action": {
+        "action_type": "replace",#enum
+        "action_input_var": "var",#string
+        "action_output_var": "var",#string
+        "options": {
+            #options object schema depends on action_type enum value
+        }
+    },
+    "replace_arguments": {
+        "replacements": [
+            {
+                "find_text": "a string to find",
+                "replace_text": "replace it with this.",
+                "replace_all": True
+            },
+            {
+                "find_text": "a string to find",
+                "replace_text": "replace it with this.",
+                "replace_all": True
+            }
+        ]
+    }
 
 }
 """

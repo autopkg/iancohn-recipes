@@ -26,7 +26,7 @@ from autopkglib import Processor, ProcessorError
 __all__ = ["GetFileStatistics"]
 
 SHA_ALGORITM_OPT = [
-    # 	'shake_256',
+    #     'shake_256',
     "sha3_384",
     "sha512",
     "blake2s",

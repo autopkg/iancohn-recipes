@@ -77,13 +77,13 @@ class VirusTotalAnalyzerV3(URLDownloader):
                 """
 <key>code_signing_checks</key>
 <dict>
-	<key>expected_authority_names</key>
-	<array>
-		<string>Dell Inc</string>
-		<string>Entrust Code Signing CA - OVCS2</string>
-		<string>Entrust Code Signing Root Certification Authority - CSBR1</string>
-		<string>Entrust.net</string>
-	</array>
+    <key>expected_authority_names</key>
+    <array>
+        <string>Dell Inc</string>
+        <string>Entrust Code Signing CA - OVCS2</string>
+        <string>Entrust Code Signing Root Certification Authority - CSBR1</string>
+        <string>Entrust.net</string>
+    </array>
 </dict>
 """
             ),
