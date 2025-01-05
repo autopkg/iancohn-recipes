@@ -16,6 +16,7 @@ Process:
     url: https://aka.ms/vs/17/release/vc_redist.x64.exe
     request_headers:
       user-agent: "%USER_AGENT%"
+- Processor: EndOfCheckPhase
 - Processor: com.github.jgstew.SharedProcessors/FileExeGetInfoPE
 - Processor: StopProcessingIf
   Arguments:
