@@ -1,0 +1,34 @@
+Description: Creates a folder for 
+Identifier: com.github.iancohn.pkg.PSADTApp
+MinimumVersion: 2.3.0
+Input:
+  PSADTVERSION: 4.1.0
+  PSADTTemplatezip: "%RECIPE_REPO_DIR%/template.zip"
+  NAME: 
+  USER_AGENT: Mozilla/5.0 (Windows NT 6.3; Win64, x64; Trident/7.0; rv:11.0) like Gecko
+Process:
+- Processor: URLDownloader
+  Arguments:
+    url: https://aka.ms/vs/17/release/vc_redist.x86.exe
+    request_headers:
+      user-agent: "%USER_AGENT%"
+- Processor: URLDownloader
+  Arguments:
+    x86Path: "%pathname%"
+    url: https://aka.ms/vs/17/release/vc_redist.x64.exe
+    request_headers:
+      user-agent: "%USER_AGENT%"
+- Processor: com.github.jgstew.SharedProcessors/FileExeGetInfoPE
+- Processor: StopProcessingIf
+  Arguments:
+    x64Path: "%pathname%"
+    predicate: |
+      download_changed == FALSE
+- Processor: StopProcessingIf
+  Arguments:
+    predicate: |
+      download_changed == FALSE
+- Processor: StopProcessingIf
+  Arguments:
+    predicate: |
+      version == "" OR version == "None"
