@@ -11,11 +11,9 @@
         <key>NAME</key>
         <string>FSLogix</string>
         <key>SEARCH_URL</key>
-        <string>https://learn.microsoft.com/en-us/fslogix/overview-release-notes</string>
+        <string>https://aka.ms/fslogix-latest</string>
         <key>SEARCH_PATTERN</key>
-        <string>https\:\/\/download\.microsoft\.com\/download\/.*\/FSLogix_[\d\.]{4,9}\.zip</string>
-        <key>USER_AGENT</key>
-        <string>Mozilla/5.0 (Windows NT 6.3; Win64, x64; Trident/7.0; rv:11.0) like Gecko</string>
+        <string>https://download\.microsoft\.com/download/[a-f0-9\-/]+/FSLogix_Apps_[\d\.]+\.zip</string>
     </dict>
     <key>MinimumVersion</key>
     <string>0.2.9</string>
@@ -39,12 +37,11 @@
             <dict>
                 <key>url</key>
                 <string>%match%</string>
-                <key>request_headers</key>
-                <dict>
-                    <key>user-agent</key>
-                    <string>%USER_AGENT%</string>
-                </dict>
             </dict>
+        </dict>
+        <dict>
+            <key>Processor</key>
+            <string>EndOfCheckPhase</string>
         </dict>
         <dict>
             <key>Processor</key>
@@ -100,10 +97,6 @@
                 <key>predicate</key>
                 <string>version == "" OR version == "None" </string>
             </dict>
-        </dict>
-        <dict>
-            <key>Processor</key>
-            <string>EndOfCheckPhase</string>
         </dict>
     </array>
 </dict>

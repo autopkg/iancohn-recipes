@@ -112,7 +112,7 @@ class VirusTotalAnalyzerV3(URLDownloader):
         "vt_signature_valid_to": {"description": "Returned from Virus Total"},
         "vt_signature_serial_number": {"description": "Returned from Virus Total"},
         "vt_signature_cert_issuer": {"description": "Returned from Virus Total"},
-        "vt_signature_thumbprint": {"description": "Returned from Virus Total"}
+        "vt_signature_thumbprint": {"description": "Returned from Virus Total"},
     }
 
     __doc__ = description

@@ -81,9 +81,7 @@ class CVEScoreGetter(URLTextSearcher):
         )
         url = NVD_SEARCH_URL_BASE + cve
 
-        self.output(
-            f"Getting {cvssVersion} score for {cve}.", verbose_level=3
-        )
+        self.output(f"Getting {cvssVersion} score for {cve}.", verbose_level=3)
         html = self.download(url, text=True)
 
         pattern = f'\\"severityDetail\\"[\s\S]*?{cvssVersion}\-calculator[\s\S]*?((?P<risk_score>[\d\.]*)\s+(?P<risk_rating>\w*))\<\/a\>'
@@ -145,7 +143,7 @@ class CVEScoreGetter(URLTextSearcher):
 
             self.output(
                 f'Maximum CVSS Score: {self.env["maximum_cve_score"]}\tRating: {self.env["maximum_cve_rating"]}',
-                verbose_level=1
+                verbose_level=1,
             )
 
         except Exception as e:
