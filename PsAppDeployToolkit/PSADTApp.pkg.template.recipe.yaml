@@ -7,7 +7,7 @@ MinimumVersion: 2.3.0
 
 Input:
   NAME: "SAMPLE" 
-  PSADT_TOOLKIT_VERSION: 4.1.0
+  PSADT_TOOLKIT_VERSION: 4.1.3
   PSADT_APP_ARCH: "" #| # Make this argument an empty string if not using.
   PSADT_APP_VENDOR: "" #| # Make this argument an empty string if not using.
   PSADT_APP_NAME: "" #| # Make this argument an empty string if not using.
@@ -17,14 +17,14 @@ Input:
 #    [Parameter(Mandatory = $false)]
 #    [System.Management.Automation.SwitchParameter]$SampleParameter,
   PSADT_CLOSE_APPS: "" #Example: @('excel', @{ Name = 'winword'; Description = 'Microsoft Word' })
-  PSADT_SCRIPT_VERSION: '1.1.1'
+  PSADT_SCRIPT_VERSION: '0.0.1'
   PSADT_SCRIPT_DATE: '2025-01-01'
   PSADT_SCRIPT_AUTHOR: 'AutoPkg'
   PSADT_REQUIRE_ADMIN: '$true'
   PSADT_PRE_INSTALL_TASKS: "" #| # Make this argument an empty string if not using.
 #    Write-ADTLogEntry -Message "Pre-Install Stuff"
   PSADT_INSTALL_TASKS: | # Make this argument an empty string if not using.
-    Write-ADTLogEntry -Message "Install Stuff"
+    Write-ADTLogEntry -Message "Installing Application"
   PSADT_POST_INSTALL_TASKS: "" #| # Make this argument an empty string if not using.
 #    Write-ADTLogEntry -Message "PostInstall Stuff"
   PSADT_CUSTOM_INSTALL_COMPLETE_COMMAND: "" # If using this argument, end it with "`n        # ", otherwise set it to an empty string
