@@ -1,24 +1,47 @@
 Description: Creates a folder for 
 Identifier: com.github.iancohn.pkg.PSADTApp
 MinimumVersion: 2.3.0
+#ParentRecipe: com.here.recipe.download.your
+
 Input:
-  PSADTVERSION: 4.1.0
-  PSADTTemplatezip: "%RECIPE_REPO_DIR%/template.zip"
-  NAME: 
-  USER_AGENT: Mozilla/5.0 (Windows NT 6.3; Win64, x64; Trident/7.0; rv:11.0) like Gecko
+  NAME: "SAMPLE" 
+  PSADT_TOOLKIT_VERSION: 4.1.0
+  PSADT_APP_ARCH: "" #| # Make this argument an empty string if not using.
+  PSADT_APP_VENDOR: "" #| # Make this argument an empty string if not using.
+  PSADT_APP_NAME: "" #| # Make this argument an empty string if not using.
+  PSADT_TEMPLATE_ZIP_PATH: "../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/PSAppDeployToolkit_Template_v4.zip"
+  PSADT_INVOKE_SCRIPT_TEMPLATE_PATH: "../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/Invoke-AppDeployToolkit.ps1"
+  PSADT_CUSTOM_PARAMETERS: "" #|
+#    [Parameter(Mandatory = $false)]
+#    [System.Management.Automation.SwitchParameter]$SampleParameter,
+  PSADT_CLOSE_APPS: "" #Example: @('excel', @{ Name = 'winword'; Description = 'Microsoft Word' })
+  PSADT_SCRIPT_VERSION: '1.1.1'
+  PSADT_SCRIPT_DATE: '2025-01-01'
+  PSADT_SCRIPT_AUTHOR: 'AutoPkg'
+  PSADT_REQUIRE_ADMIN: '$true'
+  PSADT_PRE_INSTALL_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "Pre-Install Stuff"
+  PSADT_INSTALL_TASKS: | # Make this argument an empty string if not using.
+    Write-ADTLogEntry -Message "Install Stuff"
+  PSADT_POST_INSTALL_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "PostInstall Stuff"
+  PSADT_CUSTOM_INSTALL_COMPLETE_COMMAND: "" # If using this argument, end it with "`n        # ", otherwise set it to an empty string
+  PSADT_PRE_REPAIR_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "Pre-Install Stuff"
+  PSADT_REPAIR_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "Install Stuff"
+  PSADT_POST_REPAIR_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "PostInstall Stuff"
+  PSADT_CUSTOM_REPAIR_COMPLETE_COMMAND: "" # If using this argument, end it with "`n        # ", otherwise set it to an empty string
+  PSADT_PRE_UNINSTALL_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "Pre-Install Stuff"
+  PSADT_UNINSTALL_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "Install Stuff"
+  PSADT_POST_UNINSTALL_TASKS: "" #| # Make this argument an empty string if not using.
+#    Write-ADTLogEntry -Message "PostInstall Stuff"
+  PSADT_CUSTOM_UNINSTALL_COMPLETE_COMMAND: "" # If using this argument, end it with "`n        # ", otherwise set it to an empty string
 Process:
-- Processor: URLDownloader
-  Arguments:
-    url: https://aka.ms/vs/17/release/vc_redist.x86.exe
-    request_headers:
-      user-agent: "%USER_AGENT%"
-- Processor: URLDownloader
-  Arguments:
-    x86Path: "%pathname%"
-    url: https://aka.ms/vs/17/release/vc_redist.x64.exe
-    request_headers:
-      user-agent: "%USER_AGENT%"
-- Processor: com.github.jgstew.SharedProcessors/FileExeGetInfoPE
+#- Processor: com.github.jgstew.SharedProcessors/FileExeGetInfoPE
 - Processor: StopProcessingIf
   Arguments:
     x64Path: "%pathname%"
@@ -32,3 +55,16 @@ Process:
   Arguments:
     predicate: |
       version == "" OR version == "None"
+- Processor: Unarchiver
+  Arguments:
+    archive_path: "%PSADT_TEMPLATE_ZIP_PATH%"
+    purge_destination: true
+- Processor: PathDeleter
+  Arguments:
+    path_list: 
+    - "%RECIPE_CACHE_DIR%/%NAME%/Invoke-AppDeployToolkit.ps1"
+    version: 1.4.4
+- Processor: com.github.scriptingosx.SharedProcessors/FileTemplate
+  Arguments:
+    template_path: "%PSADT_INVOKE_SCRIPT_TEMPLATE_PATH%"
+    destination_path: "%RECIPE_CACHE_DIR%/%NAME%/Invoke-AppDeployToolkit.ps1"
