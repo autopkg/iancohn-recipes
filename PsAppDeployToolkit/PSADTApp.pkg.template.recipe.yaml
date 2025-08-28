@@ -1,5 +1,7 @@
-Description: Creates a folder for 
-Identifier: com.github.iancohn.pkg.PSADTApp
+Description: |
+  This is a template recipe which will create a directory containing the PSAppDeployToolkit 
+  framework and files and can be adapter to place any required files into the files directory.
+Identifier: com.github.iancohn.pkg.PSADTApp.AppName
 MinimumVersion: 2.3.0
 #ParentRecipe: com.here.recipe.download.your
 
@@ -9,8 +11,8 @@ Input:
   PSADT_APP_ARCH: "" #| # Make this argument an empty string if not using.
   PSADT_APP_VENDOR: "" #| # Make this argument an empty string if not using.
   PSADT_APP_NAME: "" #| # Make this argument an empty string if not using.
-  PSADT_TEMPLATE_ZIP_PATH: "../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/PSAppDeployToolkit_Template_v4.zip"
-  PSADT_INVOKE_SCRIPT_TEMPLATE_PATH: "../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/Invoke-AppDeployToolkit.ps1"
+  PSADT_TEMPLATE_ZIP_PATH: "%RECIPE_DIR%/../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/PSAppDeployToolkit_Template_v4.zip"
+  PSADT_INVOKE_SCRIPT_TEMPLATE_PATH: "%RECIPE_DIR%/../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/Invoke-AppDeployToolkit.ps1"
   PSADT_CUSTOM_PARAMETERS: "" #|
 #    [Parameter(Mandatory = $false)]
 #    [System.Management.Automation.SwitchParameter]$SampleParameter,
@@ -41,7 +43,6 @@ Input:
 #    Write-ADTLogEntry -Message "PostInstall Stuff"
   PSADT_CUSTOM_UNINSTALL_COMPLETE_COMMAND: "" # If using this argument, end it with "`n        # ", otherwise set it to an empty string
 Process:
-#- Processor: com.github.jgstew.SharedProcessors/FileExeGetInfoPE
 - Processor: StopProcessingIf
   Arguments:
     x64Path: "%pathname%"
@@ -68,3 +69,7 @@ Process:
   Arguments:
     template_path: "%PSADT_INVOKE_SCRIPT_TEMPLATE_PATH%"
     destination_path: "%RECIPE_CACHE_DIR%/%NAME%/Invoke-AppDeployToolkit.ps1"
+- Processor: Copier
+  Arguments:
+    source_path: '%pathname%'
+    destination_path: "%RECIPE_CACHE_DIR%/%NAME%/Files"
