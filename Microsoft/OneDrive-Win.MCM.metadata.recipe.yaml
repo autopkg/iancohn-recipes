@@ -1,0 +1,64 @@
+Description: Generate MCM metadata for OneDrive
+Identifier: com.github.iancohn.metadata.MCM.OneDrive-Win
+MinimumVersion: 2.3.0
+ParentRecipe: com.github.iancohn.pkg.PSADTApp.OneDrive-Win
+Input:
+  APP_DESCRIPTION: OneDrive is a cloud files provider.
+Process:
+- Processor: com.github.iancohn.SharedProcessors/DictionaryFileCreator
+  Arguments:
+    output_file_path: "%RECIPE_CACHE_DIR%/%NAME%/SupportFiles/metadata.json"
+    dictionary:
+      Name: "%PSADT_APP_NAME%"
+      Description: "%APP_DESCRIPTION%"
+      Owner: 
+        - App owner 1
+        - App owner 2
+      SupportContact: 
+        - Support Contact 1
+        - Support Contact 2
+      AutoInstall: true # Allow app to be installed from Task Sequences even if no deployments
+      DefaultLanguageId: 1033
+      #AppCatalog: #Self Service Information
+      LocalizedName: "%PSADT_APP_NAME%" # In default language Self Service/Company Portal
+      LocalizedDescription: "%APP_DESCRIPTION%" # In default language Self Service/Company Portal
+      IconLocationFile: \\path\to\icon.png # Supports up to 512x512 - DLL, EXE, JPG, ICO, PNG
+      Keyword: 
+        - Microsoft
+        - OneDrive
+        - Cloud Files
+        - Storage
+      LinkText: Additional Information # Text to use for the link instead of 'Additional information'
+      PrivacyUrl: https://https://www.microsoft.com/en-us/privacy/privacystatement # max string length is 128
+      UserDocumentation: https://https://learn.microsoft.com/en-us/onedrive/ # Or a local or network path as long as users have access to it.
+      IsFeatured: false
+      Publisher: "%PSADT_APP_VENDOR%"
+      ReleaseDate: null # specify a release date explicitly
+      SoftwareVersion: "%version%"
+      DeploymentTypes:
+      - DeploymentType:
+        Technology: Script # Script, MSI, WindowsAppx
+        DeploymentTypeName: Install OneDrive - PSADT # Deploment Type names must be unique to each application. If the application and deployment type already exist, update the existing deployment type.
+        AdministratorComment: Created by AutoPkg %AUTOPKG_VERSION%
+        ContentLocation: '\\Repo\Content'
+        PersistContentInClientCache: False
+        InstallationProgram: 'Invoke-AppDeployToolkit.ps1 -DeploymentType Install DeployMode Silent'
+        InstallationStartIn: '' 
+        Force32BitInstaller: False
+        UninstallProgram: 'Invoke-AppDeployToolkit.ps1 -DeploymentType Uninstall DeployMode Silent'
+        UninstallStartIn: ''
+        InstallationProgramVisibility: Hidden # Noraml, Minimized, Maximized, Hidden
+        LogonRequirementType: WhetherOrNotUserLoggedOn # OnlyWhenUserLoggedOn, WhereOrNotUserLoggedOn, WhetherOrNotUserLoggedOn, OnlyWhenNoUserLoggedOn
+        InstallationBehaviorType: InstallForSystem # InstallForSystem, InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser, InstallForUser
+        RebootBehavior: BasedOnExitCode # BasedOnExitCode, NoAction, ProgramReboot, ForceReboot
+        MaximumAllowedRuntimeMins: 15 # min: 15, max: 1440 -or- size of the size of a maintenance window, whichever is lower.
+        EstimatedInstallationTimeMins: 5
+        OnSlowNetworkMode: Download # DoNothing, Download # May be deprecated >, DownloadContentForStreaming
+        Detection:
+          Type: File # CustomScript, File, Directory, RegistryKey, RegistryKeyValue, WindowsInstaller, Group
+          Options:
+            FileName: 'OneDrive.exe'
+            Path: '%PROGRAMFILES%\Microsoft OneDrive'
+            PropertyType: Version
+            ExpressionOperator: GreaterEquals
+            Value: '%version%'
