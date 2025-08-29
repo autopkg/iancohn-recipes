@@ -1,0 +1,88 @@
+Description: |
+  This is a sample to generate the configuration for MCM such that an app could be 
+  easily imported using PowerShell. Just copy the processor step to use. This recipe 
+  was designed to run in conjunction with the 
+Identifier: com.github.iancohn.template.config.McmApp
+MinimumVersion: 2.3.0
+Input:
+Process:
+- Processor: com.github.iancohn.SharedProcessors/DictionaryFileCreator
+  Arguments:
+    output_file_path: "%RECIPE_CACHE_DIR%/%NAME%/SupportFiles/metadata.json"
+    dictionary:
+      Name: App Name
+      Description: A description of the app
+      Owner: 
+        - App owner 1
+        - App owner 2
+      SupportContact: 
+        - Support Person 1
+        - Support Person 2
+      AutoInstall: true # Allow app to be installed from Task Sequences even if no deployments
+      DefaultLanguageId: 1033
+      #AppCatalog: #Self Service Information
+      LocalizedName: App Name # In default language Self Service/Company Portal
+      LocalizedDescription: App Description # In default language Self Service/Company Portal
+      IconLocationFile: \\path\to\icon.png # Supports up to 512x512 - DLL, EXE, JPG, ICO, PNG
+      Keyword: 
+        - Keyword1
+        - Keyword2
+      LinkText: Additional Information # Text to use for the link instead of 'Additional information'
+      PrivacyUrl: https://localhost/privacy.html # max string length is 128
+      UserDocumentation: https://localhost/userdocs.html # Or a local or network path as long as users have access to it.
+      IsFeatured: false
+      Publisher: App Vendor Inc.
+      ReleaseDate: null # specify a release date explicitly
+      SoftwareVersion: 1.0.0
+      DeploymentTypes:
+      - DeploymentType:
+        Technology: Script # Script, MSI, WindowsAppx
+        DeploymentTypeName: (Install Software - PSADT) # Deploment Type names must be unique to each application. If the application and deployment type already exist, update the existing deployment type.
+        AdministratorComment: Created by AutoPkg %AUTOPKG_VERSION%
+        ContentLocation: '\\Repo\Content'
+        PersistContentInClientCache: False
+        InstallationProgram: 'Invoke-AppDeployToolkit.ps1 -DeploymentType Install DeployMode Silent'
+        InstallationStartIn: '' 
+        Force32BitInstaller: False
+        UninstallProgram: 'Invoke-AppDeployToolkit.ps1 -DeploymentType Uninstall DeployMode Silent'
+        UninstallStartIn: ''
+        InstallationProgramVisibility: Hidden # Noraml, Minimized, Maximized, Hidden
+        LogonRequirementType: WhetherOrNotUserLoggedOn # OnlyWhenUserLoggedOn, WhereOrNotUserLoggedOn, WhetherOrNotUserLoggedOn, OnlyWhenNoUserLoggedOn
+        InstallationBehaviorType: InstallForSystem # InstallForSystem, InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser, InstallForUser
+        RebootBehavior: BasedOnExitCode # BasedOnExitCode, NoAction, ProgramReboot, ForceReboot
+        MaximumAllowedRuntimeMins: 120
+        EstimatedInstallationTimeMins: 0
+        OnSlowNetworkMode: Download # DoNothing, Download # May be deprecated >, DownloadContentForStreaming
+        Requirements: # Not a straightforward implementation.  For now, use a string to indicate the req's (if any) that should be set manually.
+        DependencyGroups:
+        - DependencyGroup: # Each Dependency Group is connected with an 'and' operand
+          Name: Dependency Group Name 1
+          DeploymentTypes:
+          - DeploymentType: # Each DeploymentType under DeploymentTypes is connected with an 'or' operand
+              ApplicationName: AppName1
+              DeploymentType: DeploymentTypeName1
+              IsAutoInstall: false
+          - DeploymentType:
+              ApplicationName: AppName1
+              DeploymentType: DeploymentTypeName2
+              IsAutoInstall: true
+        - DependencyGroup:
+          Name: Dependency Group Name 2
+          DeploymentTypes:
+          - DeploymentType:
+              ApplicationName: AppName3
+              DeploymentType: DeploymentTypeName3
+              IsAutoInstall: false
+        ReturnCodes:
+        - ReturnCode:
+          ReturnCode: 4000
+          CodeType: Failure # Failure, Success, FastRetry, HardReboot, SoftReboot
+          Description:
+        Detection:
+          Type: CustomScript # CustomScript, File, Directory, RegistryKey, RegistryKeyValue, WindowsInstaller
+          Options:
+            ScriptType: PowerShell #Always PowerShell
+            ScriptContent: |
+              if (Get-Process "ccmexec*") {
+                Write-Output "Installed"
+              }         
