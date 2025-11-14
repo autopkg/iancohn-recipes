@@ -17,11 +17,8 @@
 # limitations under the License.
 import requests
 import keyring
-import json
 from lxml import etree
 from requests_ntlm import HttpNtlmAuth
-from enum import Enum,auto
-from io import BytesIO
 from autopkglib import Processor,ProcessorError
 
 __all__ = ["McmScopeSetter"]
