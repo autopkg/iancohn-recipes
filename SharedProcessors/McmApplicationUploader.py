@@ -240,6 +240,8 @@ class McmApplicationUploader(Processor):
             "default": {
                 "app_ci_id": {"type": "property", "raise_error": False,"options": {"expression": "CI_ID"}},
                 "app_model_name": {"type": "property", "raise_error": True,"options": {"expression": "ModelName"}},
+                "object_class": {"type": "property", "raise_error": True,"options": {"expression": "__CLASS"}},
+                "current_object_path": {"type":"property", "raise_error": False, "options": {"expression": "ObjectPath"}},
                 "app_securityscopes": {"type": "property", "raise_error": False,"options": {"expression": "SecuredScopeNames"}},
                 "app_is_deployed": {"type": "property", "raise_error": True, "options": {"expression": "IsDeployed"}},
                 "app_logical_name": {"type": "xpath", "raise_error": True,"options": {"select_value_index": '0', "strip_namespaces": False, "property": "SDMPackageXML", "expression": '/*[local-name()="AppMgmtDigest"]/*[local-name()="Application"]/@LogicalName'}},

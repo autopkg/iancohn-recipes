@@ -114,6 +114,17 @@ class McmScopeSetter(Processor):
         keychainServiceName = self.env.get("keychain_password_service", self.input_variables["keychain_password_service"]["default"])
         keychainUsername = self.env.get("keychain_password_username",self.env.get("MCMAPI_USERNAME",''))
         self.fqdn = self.env.get("mcm_site_server_fqdn", '')
+        if (self.fqdn == None or self.fqdn == ''):
+            raise ProcessorError("mcm_site_server_fqdn cannot be blank")
+        if (keychainServiceName == None or keychainUsername == ''):
+            raise ProcessorError("keychain_password_service cannot be blank")
+        if (keychainUsername == None or keychainUsername == ''):
+            raise ProcessorError("keychain_password_username cannot be blank")
+        self.output("Generating NTLM Auth object.",3)
+        self.ntlm = self.get_mcm_ntlm_auth(
+            keychainServiceName=keychainServiceName,
+            keychainUsername=keychainUsername
+        )
         self.action = self.env.get('action',self.input_variables['action']['default']).lower()
         if self.input_variables['action']['options'].__contains__(self.action.lower()) == False:
             raise ProcessorError(f"'action' must be one of {', '.join(self.input_variables['action']['options'])}")
@@ -128,19 +139,6 @@ class McmScopeSetter(Processor):
         self.action_scope_names = self.env.get('security_scopes',self.env.get('security_scopes',[]))
         if self.action_scope_names is None or isinstance(self.action_scope_names, list) == False or len(self.action_scope_names) == 0:
             raise ProcessorError("security_scopes is required, and must have at least one item.")
-        if (self.fqdn == None or self.fqdn == ''):
-            raise ProcessorError("mcm_site_server_fqdn cannot be blank")
-        
-        if (keychainServiceName == None or keychainUsername == ''):
-            raise ProcessorError("keychain_password_service cannot be blank")
-
-        if (keychainUsername == None or keychainUsername == ''):
-            raise ProcessorError("keychain_password_username cannot be blank")
-        self.output("Generating NTLM Auth object.",3)
-        self.ntlm = self.get_mcm_ntlm_auth(
-            keychainServiceName=keychainServiceName,
-            keychainUsername=keychainUsername
-        )
         
         try:
             self.object_type_id = self.get_mcm_object_type_id(object_key=self.object_key)
