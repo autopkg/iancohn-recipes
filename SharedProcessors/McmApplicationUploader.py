@@ -239,6 +239,7 @@ class McmApplicationUploader(Processor):
             "required": False,
             "default": {
                 "app_ci_id": {"type": "property", "raise_error": False,"options": {"expression": "CI_ID"}},
+                "app_model_name": {"type": "property", "raise_error": True,"options": {"expression": "ModelName"}},
                 "app_securityscopes": {"type": "property", "raise_error": False,"options": {"expression": "SecuredScopeNames"}},
                 "app_is_deployed": {"type": "property", "raise_error": True, "options": {"expression": "IsDeployed"}},
                 "app_logical_name": {"type": "xpath", "raise_error": True,"options": {"select_value_index": '0', "strip_namespaces": False, "property": "SDMPackageXML", "expression": '/*[local-name()="AppMgmtDigest"]/*[local-name()="Application"]/@LogicalName'}},
@@ -328,6 +329,7 @@ class McmApplicationUploader(Processor):
             postResponseJson = postResponse.json()
             self.output("Got Json body from response", 3)
             export_properties:dict = self.env.get('response_export_properties',self.input_variables['response_export_properties']['default'])
+            self.output(f"export_properties config: \n\n{json.dumps(export_properties)}", 3)
             self.output("Setting the value of specified export properties",2)
             for k in list(export_properties.keys()):
                 self.output(f"Getting export property '{k}' from a {export_properties.get(k,{}).get('type','TypeNotFound')} expression", 3)
@@ -380,5 +382,5 @@ class McmApplicationUploader(Processor):
             raise e
 
 if __name__ == "__main__":
-    processor = McmApplicationUploader()
-    processor.execute_shell()
+    PROCESSOR = McmApplicationUploader()
+    PROCESSOR.execute_shell()
