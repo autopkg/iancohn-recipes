@@ -17,7 +17,6 @@
 # limitations under the License.
 import requests
 import keyring
-from lxml import etree
 from requests_ntlm import HttpNtlmAuth
 from autopkglib import Processor,ProcessorError
 
