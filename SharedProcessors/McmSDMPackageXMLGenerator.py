@@ -22,16 +22,18 @@ import json
 import string
 import random
 import base64
+import sys
 
 from ctypes import c_int32
 from datetime import datetime
 from enum import Enum,auto
-from os import path,walk
+from os import path,walk,listdir
 from requests_ntlm import HttpNtlmAuth
 from PIL import Image
 from io import BytesIO
 from lxml import etree
 from copy import deepcopy
+from pathlib import Path
 from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 # Helper functions
@@ -460,7 +462,10 @@ def new_resource_id_attribute() -> XmlAttributeAsDict:
 # Content
 def new_content_file(pathname:str,unix_root:str) -> XmlNodeAsDict:
     relative_windows_path = get_relative_windows_path(pathname,unix_root)
-    size = path.getsize(pathname)
+    if pathname.endswith("/"):
+        size = 0
+    else:        
+        size = path.getsize(pathname)
     return XmlNodeAsDict(NodeName="File",Attributes=[XmlAttributeAsDict(Name='Name',Value=relative_windows_path),
                                                       XmlAttributeAsDict(Name='Size',Value=size)])
 
@@ -473,10 +478,25 @@ def new_content_importer(content_location:str,content_location_local:str,content
     content_files = []
     if content_location_local[-1] != '/':
         content_location_local = f"{content_location_local}/"
-    for root, dirs, files in walk(content_location_local):
-        for filename in files:
-            fullName = path.join(root, filename)
-            content_files.append(new_content_file(pathname=fullName,unix_root=content_location_local))
+    files = []
+    empty_dirs = []
+    for dirpath,dirnames,filenames in walk(content_location_local):
+        if filenames:
+            for filename in filenames:
+                files.append(path.join(dirpath, str(filename)))
+        else:
+            empty_dirs.append(path.join(dirpath,''))
+    files.sort(key=lambda p: (Path(p).parent, Path(p).name))
+    empty_dirs.sort()
+    content_items = files + empty_dirs
+    for c in content_items:
+        content_files.append(new_content_file(pathname=c,unix_root=content_location_local))
+    #for root, dirs, file in walk(content_location_local):
+    #    for filename in file:
+    #        full_name = path.join(root, filename)
+    #        content_files.append(new_content_file(pathname=full_name,unix_root=content_location_local))
+    #    if not file:
+    #        content_files.append(new_content_file(pathname=(root.rstrip('/') + "/"),unix_root=content_location_local))
     importer.append_child_node(content_files)
     location = XmlNodeAsDict(NodeName='Location')
     if content_location is not None and len(content_location) > 0 and content_location[-1] != "\\":
@@ -639,7 +659,8 @@ def get_file_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:st
     if method_attribute.get('Value','') == 'Value':
         attributes.append(XmlAttributeAsDict(Name='PropertyPath',Value=setting_options['Property']))
     attributes.append(XmlAttributeAsDict(Name='Changeable',Value='false'))
-    nodes.append(XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes))
+    setting_reference = XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes)
+    nodes.append(setting_reference)
     if ['Between','OneOf','NoneOf'].__contains__(setting_options.get('Operator')):
         comparisons = []
         for c in setting_options.get('Value',[]):
@@ -649,7 +670,7 @@ def get_file_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:st
     elif method_attribute.get('Value') == 'Count':
         comparison = new_constant_value(value='0',data_type='Int64')
     else:
-        comparison = new_constant_value(value=setting_options['Value'],data_type=setting_options['DataType'])
+        comparison = new_constant_value(value=setting_options['Value'],data_type=setting_reference.get_attribute_value('DataType'))
     nodes.append(comparison)
     return nodes
 
@@ -918,7 +939,8 @@ def new_detection_rule_node(authoring_scope_id:str,application_id,deployment_typ
 def new_enhanced_detection_method_node(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_config:dict,severity:str='Informational',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
     setting_nodes = get_nested_settings(detection_config=detection_config)
     settings_node = XmlNodeAsDict(NodeName='Settings',ChildNodes=setting_nodes,Attributes=[XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('AppMgmtDigest')['ns'])])
-    rule_node = new_detection_rule_node(authoring_scope_id=authoring_scope_id,application_id=application_id,deployment_type_id=deployment_type_id,detection=detection_config,severity=severity,noncompliance_on_nonexistance=noncompliance_on_nonexistance)
+    rule_node = new_detection_rule_node(authoring_scope_id=authoring_scope_id,application_id=application_id,deployment_type_id=deployment_type_id,
+            detection=detection_config,severity=severity,noncompliance_on_nonexistance=noncompliance_on_nonexistance)
     enhanced_detection_method = XmlNodeAsDict(NodeName='EnhancedDetectionMethod',Attributes=[XmlAttributeAsDict(Name="xmlns",Value=get_nsmap('AppMgmtDigest')['ns'])],xml_declaration=True)
     enhanced_detection_method.append_child_node([settings_node])
     enhanced_detection_method.append_child_node([rule_node])
@@ -1108,7 +1130,7 @@ def new_detection_nodes(authoring_scope_id:str,application_id:str,deployment_typ
         detect_action_params['args'].append(new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context))
         detect_action_params['args'].append(new_arg(arg_name='ScriptType', arg_type='Int32',arg_value='0'))
         detect_action_params['args'].append(new_arg(arg_name='ScriptBody', arg_type='String',arg_value=detection_item.get('Options',{}).get('ScriptContent','')))
-        detect_action_params['args'].append(new_arg(arg_name='RunAs32Bit', arg_type='Boolean',arg_value=bool(detection_item.get('Options',{}).get('RunAs32Bit',False)).__str__().lower()))
+        detect_action_params['args'].append(new_arg(arg_name='RunAs32Bit', arg_type='Boolean',arg_value=bool(detection_item.get('Options',{}).get('RunAs32Bit') or False)).__str__().lower())
         custom_data_nodes.append(XmlNodeAsDict(NodeName='DetectionMethod',NodeInnerText='Script'))
         custom_data_nodes.append(XmlNodeAsDict(
             NodeName='DetectionScript',
@@ -1116,7 +1138,8 @@ def new_detection_nodes(authoring_scope_id:str,application_id:str,deployment_typ
             NodeInnerText=detection_item.get('Options',{}).get('ScriptContent',''))
         )
     else:
-        enhanced_detection = new_enhanced_detection_method_node(authoring_scope_id=authoring_scope_id,application_id=application_id,deployment_type_id=deployment_type_id,detection_config=detection_item)
+        enhanced_detection = new_enhanced_detection_method_node(authoring_scope_id=authoring_scope_id,application_id=application_id,
+                deployment_type_id=deployment_type_id,detection_config=detection_item)
         xml_string = enhanced_detection.to_xml_string()
         detect_action_params['provider'] = 'Local'
         detect_action_params['args'].append(new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context))
@@ -1568,22 +1591,26 @@ class McmSDMPackageXMLGenerator(Processor):
             ]
             #Logon Requirement
             if deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
-                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String',arg_value='True'))
+                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='True'))
             elif deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
-                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String',arg_value='False'))
+                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='False'))
             else:
                 install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String'))
             # Install settings
             install_action_params['args'].append(new_arg(arg_name='RequiresElevatedRights',arg_type='Boolean',arg_value='false'))
-            install_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
+            requires_user_interaction = (deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction') or '').__str__().lower()
+            if requires_user_interaction == '':
+                install_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String'))
+            else:
+                install_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=requires_user_interaction))
             install_action_params['args'].append(new_arg(arg_name='RequiresReboot',arg_type='Boolean',arg_value=(reboot_behavior == 'ForceReboot').__str__().lower()))
             install_action_params['args'].append(new_arg(arg_name='UserInteractionMode',arg_type='String',arg_value=visibility.name))
             install_action_params['args'].append(new_arg(arg_name='PostInstallBehavior',arg_type='String',arg_value=reboot_behavior.name))
-            estimated_execute_time = deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins',0)
+            estimated_execute_time = deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins') or 0
             if (0 <= estimated_execute_time <= 1440) == False:
                 raise ProcessorError("EstimatedInstallationTime must be an integer between 0 and 1440")
             install_action_params['args'].append(new_arg(arg_name='ExecuteTime',arg_type='Int32',arg_value=f"{estimated_execute_time}"))
-            max_execute_time = deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins',120)
+            max_execute_time = deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins') or  120
             if (15 <= max_execute_time <= 1440) == False:
                 raise ProcessorError("MaximumAllowedRuntimeMins must be an integer between 15 and 1440")
             install_action_params['args'].append(new_arg(arg_name='MaxExecuteTime',arg_type='Int32',arg_value=f"{max_execute_time}"))
@@ -1608,7 +1635,7 @@ class McmSDMPackageXMLGenerator(Processor):
                 "Reboot": reboot_exit_codes,
                 "FastRetry": fastretry_exit_codes
             }
-            for rc in deployment_type_configuration.get('Options',{}).get('CustomReturnCodes',[]):
+            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
                 rc_hash[rc['CodeType']].append(rc['ReturnCode'])
             for rc_type in rc_hash.keys():
                 if len(rc_hash[rc_type]) > 0:
@@ -1665,14 +1692,19 @@ class McmSDMPackageXMLGenerator(Processor):
             ]
             #Logon Requirement
             if deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String',arg_value='True'))
+                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='True'))
             elif deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String',arg_value='False'))
+                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='False'))
             else:
                 uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String'))
-            # Install settings
+            # Uninstall settings
             uninstall_action_params['args'].append(new_arg(arg_name='RequiresElevatedRights',arg_type='Boolean',arg_value='false'))
-            uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
+            requires_user_interaction = (deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction') or '').__str__().lower()
+            if requires_user_interaction == '':
+                uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String'))
+            else:
+                uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=requires_user_interaction))
+            #uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
             uninstall_action_params['args'].append(new_arg(arg_name='RequiresReboot',arg_type='Boolean',arg_value=(reboot_behavior == 'ForceReboot').__str__().lower()))
             uninstall_action_params['args'].append(new_arg(arg_name='UserInteractionMode',arg_type='String',arg_value=visibility.name))
             uninstall_action_params['args'].append(new_arg(arg_name='PostInstallBehavior',arg_type='String',arg_value=reboot_behavior.name))
@@ -1705,14 +1737,14 @@ class McmSDMPackageXMLGenerator(Processor):
                 "SoftReboot": reboot_exit_codes,
                 "FastRetry": fastretry_exit_codes
             }
-            for rc in deployment_type_configuration.get('Options',{}).get('CustomReturnCodes',[]):
+            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
                 rc_hash[rc['CodeType']].append(rc['ReturnCode'])
             for rc_type in rc_hash.keys():
                 if len(rc_hash[rc_type]) > 0:
-                    uninstall_action_params['args'].append(new_arg(arg_name=f"{rc_type}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
+                    uninstall_action_params['args'].append(new_arg(arg_name=f"{rc_type.replace('Soft','',1)}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
             # Content Reference
-            uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting','NoneRequired')
-            if uninstall_setting == 'Different' and deployment_type_configuration.get('Options',{}).get('UninstallContentLocation','') != '':
+            uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting') or 'NoneRequired'
+            if uninstall_setting == 'Different' and (deployment_type_configuration.get('Options',{}).get('UninstallContentLocation') or '') != '':
                 content_reference = get_content_reference(content_importer=XmlNodeAsDict.instance_map_by_external_id[f"{id(deployment_type_configuration.get('Options',{}).get('UninstallContentLocation_Local'))}"])
                 uninstall_action_params['content_reference'] = content_reference
             elif uninstall_setting == 'SameAsInstall':
@@ -1761,14 +1793,19 @@ class McmSDMPackageXMLGenerator(Processor):
             ]
             #Logon Requirement
             if deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
-                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String',arg_value='True'))
+                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='True'))
             elif deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
-                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String',arg_value='False'))
+                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='False'))
             else:
                 repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String'))
-            # Install settings
+            # Repair settings
             repair_action_params['args'].append(new_arg(arg_name='RequiresElevatedRights',arg_type='Boolean',arg_value='false'))
-            repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
+            requires_user_interaction = (deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction') or '').__str__().lower()
+            if requires_user_interaction == '':
+                repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String'))
+            else:
+                repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=requires_user_interaction))
+            #repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
             repair_action_params['args'].append(new_arg(arg_name='RequiresReboot',arg_type='Boolean',arg_value=(reboot_behavior == 'ForceReboot').__str__().lower()))
             repair_action_params['args'].append(new_arg(arg_name='UserInteractionMode',arg_type='String',arg_value=visibility.name))
             repair_action_params['args'].append(new_arg(arg_name='PostInstallBehavior',arg_type='String',arg_value=reboot_behavior.name))
@@ -1801,17 +1838,13 @@ class McmSDMPackageXMLGenerator(Processor):
                 "SoftReboot": reboot_exit_codes,
                 "FastRetry": fastretry_exit_codes
             }
-            for rc in deployment_type_configuration.get('Options',{}).get('CustomReturnCodes',[]):
+            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
                 rc_hash[rc['CodeType']].append(rc['ReturnCode'])
             for rc_type in rc_hash.keys():
                 if len(rc_hash[rc_type]) > 0:
-                    repair_action_params['args'].append(new_arg(arg_name=f"{rc_type}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
+                    repair_action_params['args'].append(new_arg(arg_name=f"{rc_type.replace('Soft','')}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
         elif repair_action_params['provider'] == 'TaskSequence':
             raise ProcessorError("TaskSequence deployment types are not yet supported")
-            repair_action_params["args"] = [
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context),
-                new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string)
-            ]
         elif repair_action_params['provider'] == 'Windows8App':
             raise ProcessorError("Windows8App deployment types are not yet supported")
             repair_action_params["args"] = [
@@ -1830,7 +1863,7 @@ class McmSDMPackageXMLGenerator(Processor):
             custom_data_nodes.append(XmlNodeAsDict(NodeName='InstallCommandLine',NodeInnerText=deployment_type_configuration.get('Options',{}).get('InstallationProgram')))
         elif deployment_technology == 'TaskSequence':
             custom_data_nodes.append(XmlNodeAsDict(NodeName='InstallCommandLine',NodeInnerText='Task Sequence'))
-        if deployment_technology == 'Script':
+        if deployment_type_configuration.get('Options',{}).get('Force32BitInstaller',False).__str__().lower() == 'true':
             custom_data_nodes.append(XmlNodeAsDict(NodeName='RedirectCommandLine',NodeInnerText='true'))
         install_content_local = deployment_type_configuration.get('Options',{}).get('ContentLocation_Local','')
         if ['MSI','Script'].__contains__(deployment_technology):
@@ -1838,7 +1871,7 @@ class McmSDMPackageXMLGenerator(Processor):
                 install_content = XmlNodeAsDict.instance_map_by_external_id[f"{id(install_content_local)}"]
                 install_content_id = install_content.get_attribute_value(attribute_name='ContentId')
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='InstallContent',Attributes=[XmlAttributeAsDict(Name='ContentId',Value=install_content_id),XmlAttributeAsDict(Name='Version',Value='1')]))
-            uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting','SameAsInstall')
+            uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting') or 'SameAsInstall'
             uninstall_content_local = deployment_type_configuration.get('Options',{}).get('UninstallContentLocation_Local','')
             if uninstall_setting == 'SameAsInstall' and install_content_local != '':
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallContent',Attributes=[XmlAttributeAsDict(Name='ContentId',Value=install_content_id),XmlAttributeAsDict(Name='Version',Value='1')]))
@@ -1847,9 +1880,10 @@ class McmSDMPackageXMLGenerator(Processor):
                 uninstall_content_id = uninstall_content.get_attribute_value(attribute_name='ContentId')
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallContent',Attributes=[XmlAttributeAsDict(Name='ContentId',Value=uninstall_content_id),XmlAttributeAsDict(Name='Version',Value='1')]))
             uninstall_command_line = deployment_type_configuration.get('Options',{}).get('UninstallProgram','')
-            uninstall_start_in = deployment_type_configuration.get('Options',{}).get('UninstallStartIn','')
+            uninstall_start_in = deployment_type_configuration.get('Options',{}).get('UninstallStartIn') or ''
             if uninstall_command_line != '':
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallCommandLine',NodeInnerText=uninstall_command_line))
+            if uninstall_start_in.strip() != '':
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallFolder',NodeInnerText=uninstall_start_in))
             custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallSetting',NodeInnerText=uninstall_setting))
             repair_command_line = deployment_type_configuration.get('Options',{}).get('RepairProgram','')
@@ -1858,9 +1892,10 @@ class McmSDMPackageXMLGenerator(Processor):
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='RepairCommandLine',NodeInnerText=repair_command_line))
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='RepairFolder',NodeInnerText=repair_start_in))
             self.output("Adding MaxExecute node.", 3)
-            custom_data_nodes.append(XmlNodeAsDict(NodeName="MaxExecuteTime",NodeInnerText=str(deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins',120))))
+            custom_data_nodes.append(XmlNodeAsDict(NodeName="MaxExecuteTime",NodeInnerText=str(deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins') or 120)))
             self.output("Adding ExecuteTime node.", 3)
-            custom_data_nodes.append(XmlNodeAsDict(NodeName="ExecuteTime",NodeInnerText=str(deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins',0))))
+            custom_data_nodes.append(XmlNodeAsDict(NodeName="ExecuteTime",NodeInnerText=str(deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins') or 0)))
+            self.output("Added execution time nodes.", 3)
             if deployment_type_configuration.get('Options',{}).get('KeepDefaultReturnCodes',True):
                 return_code_nodes = [
                     XmlNodeAsDict(NodeName="ExitCode",Attributes=[XmlAttributeAsDict(Name="Code",Value="0"),XmlAttributeAsDict(Name="Class",Value="Success")]),
@@ -1878,7 +1913,7 @@ class McmSDMPackageXMLGenerator(Processor):
                 "Reboot": "SoftReboot",
                 "FastRetry": "FastRetry"
             }
-            for rc in deployment_type_configuration.get('Options',{}).get('CustomReturnCodes',[]):
+            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
                 node_params = {
                     "NodeName": "ExitCode",
                     "Attributes": [
@@ -1893,12 +1928,8 @@ class McmSDMPackageXMLGenerator(Processor):
                 return_code_nodes.append(XmlNodeAsDict(**node_params))
             if len(return_code_nodes) > 0:
                 custom_data_nodes.append(XmlNodeAsDict(NodeName="ExitCodes",ChildNodes=return_code_nodes))
-        detect_processes = deployment_type_configuration.get('Options',{}).get('InstallProcessDetection',[])
-        if len(detect_processes) > 0:
-            processes = []
-            for ipd in detect_processes:
-                processes.append(new_process_information(process_name=ipd['ProcessName'],process_display_name=ipd['DisplayName']))
-            custom_data_nodes.append(new_install_process_detection(process_information=processes))
+            self.output("Add Installation Program Visibility node.", 3)
+            custom_data_nodes.append(XmlNodeAsDict(NodeName="UserInteractionMode",NodeInnerText=(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility') or 'Hidden')))
         if ['MSI','Script'].__contains__(deployment_technology):
             allow_uninstall = deployment_type_configuration.get('Options',{}).get('AllowUninstall',True)
             if allow_uninstall:
@@ -1908,14 +1939,22 @@ class McmSDMPackageXMLGenerator(Processor):
                 custom_data_nodes.append(XmlNodeAsDict(NodeName='SourceUpdateProductCode',NodeInnerText=source_product_code))
         else: # TaskSequence or Windows8App specific nodes.
             pass
+        detect_processes = deployment_type_configuration.get('Options',{}).get('InstallProcessDetection',[])
+        if len(detect_processes) > 0:
+            processes = []
+            for ipd in detect_processes:
+                processes.append(new_process_information(process_name=ipd['ProcessName'],process_display_name=ipd['DisplayName']))
+            custom_data_nodes.append(new_install_process_detection(process_information=processes))
         installer_root.append_child_node([XmlNodeAsDict(NodeName='CustomData',ChildNodes=custom_data_nodes)])
     def new_installer_node(self,authoring_scope_id:str,application_id:str,logical_name:str,version:int,deployment_type_configuration:dict) -> XmlNodeAsDict:
         installer_root = XmlNodeAsDict(NodeName='Installer',Attributes=[XmlAttributeAsDict(Name='Technology',Value=deployment_type_configuration.get('Technology'))])
-        requires_logon = 'true' if deployment_type_configuration.get('ExecutionContext','System') == 'System'  or deployment_type_configuration.get('LogonRequirementType','') == 'OnlyWhenUserLoggedOn' else 'false' if deployment_type_configuration.get('LogonRequirementType','') == 'OnlyWhenNoUserLoggedOn' else None
         installer_root.append_child_node([
-            XmlNodeAsDict(NodeName='ExecutionContext',NodeInnerText=deployment_type_configuration.get('ExecutionContext','System')),
-            XmlNodeAsDict(NodeName='RequiresLogOn',NodeInnerText=requires_logon)
+            XmlNodeAsDict(NodeName='ExecutionContext',NodeInnerText=deployment_type_configuration.get('ExecutionContext','System'))
         ])
+        if deployment_type_configuration.get('ExecutionContext','System') != 'System' or deployment_type_configuration.get('LogonRequirementType','') == 'OnlyWhenUserLoggedOn':
+            installer_root.append_child_node([XmlNodeAsDict(NodeName='RequiresLogOn',NodeInnerText='true')])
+        elif deployment_type_configuration.get('LogonRequirementType','') == 'OnlyWhenNoUserLoggedOn':
+            installer_root.append_child_node([XmlNodeAsDict(NodeName='RequiresLogOn',NodeInnerText='false')])
         content_path = deployment_type_configuration.get('Options',{}).get('ContentLocation')
         local_content_path = deployment_type_configuration.get('Options',{}).get('ContentLocation_Local')
         content_nodes = []
@@ -1929,7 +1968,7 @@ class McmSDMPackageXMLGenerator(Processor):
                 "slow_network_action": ContentHandlingMode(deployment_type_configuration.get('Options',{}).get('OnSlowNetwork','Download'))
             }
         content_nodes.append(new_content_importer(**content_params))
-        uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting','NoneRequired')
+        uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting') or 'NoneRequired'
         if uninstall_setting == 'Different':
             content_params = {
                 "content_location": deployment_type_configuration.get('Options',{}).get('UninstallContentLocation',None),
@@ -1951,11 +1990,11 @@ class McmSDMPackageXMLGenerator(Processor):
         self.output("Adding install action node", 2)
         self.add_install_action(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration)
         # UninstallAction
-        if deployment_type_configuration.get('Options',{}).get('UninstallProgram','').strip() != '':
+        if (deployment_type_configuration.get('Options',{}).get('UninstallProgram') or '').strip() != '':
             self.output("Adding uninstall action node", 2)
             self.add_uninstall_action(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration)
         # RepairAction
-        if deployment_type_configuration.get('Options',{}).get('RepairProgram','').strip() != '':
+        if (deployment_type_configuration.get('Options',{}).get('RepairProgram') or '').strip() != '':
             self.output("Adding repair action node", 2)
             self.add_repair_action(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration)
         # CustomData
@@ -1978,6 +2017,7 @@ class McmSDMPackageXMLGenerator(Processor):
             valid = ', '.join(f.value for f in DeploymentTechnology)
             raise ProcessorError(f"Invalid deployment technology: '{deployment_type_configuration.get('Technology')}'. Valid: {valid}")
         title = deployment_type_configuration.get('Options',{}).get('DeploymentTypeName','Install')
+        self.output(f"Title: {title}", 3)
         node = XmlNodeAsDict(NodeName='DeploymentType',Attributes=attributes)
         child_nodes = [XmlNodeAsDict(NodeName='Title',NodeInnerText=title,Attributes=[new_resource_id_attribute()])]
         # Append administrator comments
@@ -1987,8 +2027,10 @@ class McmSDMPackageXMLGenerator(Processor):
         else:
             child_nodes.append(XmlNodeAsDict(NodeName="Description",Attributes=[new_resource_id_attribute()]))
         # Append languages
-        languages = deployment_type_configuration.get('Options',{}).get('Languages','')
-        if isinstance(languages,str):
+        languages = deployment_type_configuration.get('Options',{}).get('Languages',[])
+        if languages == None:
+            languages_list = []
+        elif isinstance(languages,str):
             languages_list = [languages]
         elif isinstance(languages,list):
             languages_list = languages
@@ -1996,7 +2038,7 @@ class McmSDMPackageXMLGenerator(Processor):
             child_nodes.append(new_languages_node(languages_list))
         # Append requirements
         requirements_rules = []
-        requirements = deployment_type_configuration.get('Options',{}).get('Requirements',[])
+        requirements = deployment_type_configuration.get('Options',{}).get('Requirements') or []
         self.output(f"Assembling {len(requirements)} requirements", 2)
         for r in requirements:
             rule_config_type = r['Type']
@@ -2010,7 +2052,7 @@ class McmSDMPackageXMLGenerator(Processor):
         
         # Append dependencies
         self.output("Examining dependencies", 3)
-        dependency_groups = deployment_type_configuration.get('Options',{}).get('DependencyGroups',[])
+        dependency_groups = deployment_type_configuration.get('Options',{}).get('DependencyGroups') or []
 
         if (len(dependency_groups) > 0):
             self.output("Creating dependency groups", 3)
@@ -2087,19 +2129,23 @@ class McmSDMPackageXMLGenerator(Processor):
             # Search for existing app
             app = self.env.get('mcm_application_configuration')
             behaviorIfAppExists = app.get('BehaviorIfExists','Exit')
-            existing_app_ci_id = self.env.get('existing_app_ci_id',0)
+            existing_app_ci_id = self.env.get('existing_app_ci_id') or 0
             self.output(f"Existing CI_ID: {existing_app_ci_id}", 3)
-            existing_app_sdmpackagexml = self.env.get('existing_app_sdmpackagexml','')
+            existing_app_sdmpackagexml = self.env.get('existing_app_sdmpackagexml') or ''
             self.output(f"Existing SDMPackageXML Length: {len(existing_app_sdmpackagexml)}", 3)
             if existing_app_sdmpackagexml != '' and existing_app_ci_id > 0:
                 self.output("An existing application with this name was located.", 2)
                 existingApp = XmlNodeAsDict.from_xml_string_with_tracking(xml_string = existing_app_sdmpackagexml.replace('<?xml version="1.0" encoding="utf-16"?>','',1))
+            else:
+                self.output(f"Existing app does not exist.", 3)
+                existingApp = None
             isNewApp = True
             appName = app.get('Name')
             if existingApp is not None and behaviorIfAppExists == 'Exit':
                 self.output(f"The application already exists and BehaviorIfExists was set to 'Exit'. Nothing to do.",1)
                 return
             if existingApp is None:
+                self.output("A new application object will be created.", 3)
                 pass
             elif behaviorIfAppExists == 'Update':
                 isNewApp = False
@@ -2111,6 +2157,7 @@ class McmSDMPackageXMLGenerator(Processor):
                 appVersion = int(existingApp.find_children_by_name('Application')[0].get_attribute_value('Version')) + 1
                 self.env['mcm_application_ci_id'] = existing_app_ci_id
             elif behaviorIfAppExists == 'AppendIndex':
+                self.output(f"An index will be appended.", 3)
                 done = False
                 index = 1
                 while done == False and index < 20:
@@ -2140,11 +2187,11 @@ class McmSDMPackageXMLGenerator(Processor):
                     raise ProcessorError(f"An application already exists which already includes the version in the title. ({searchName})")
             else:
                 raise ProcessorError("Invalid setting for BehaviorIfExists.")
-            if isNewApp:
+            if isNewApp == True:
                 appVersion = 1
                 appLogicalName = McmIdentifier().get_logical_name('Application')
                 self.env['mcm_application_ci_id'] = 0            
-            self.output(f"\n\tName: {appName}\n\tLogicalName: {appLogicalName}\n\tRevision: {appVersion}\n\tCI_ID: {self.env['mcm_application_ci_id']}",3)
+            self.output(f"\n\tName: {appName}\n\tLogicalName: {appLogicalName}\n\tRevision: {appVersion}\n\tCI_ID: {existing_app_ci_id}",3)
             self.output("Examining deployment types.", 1)
             if self.env.get('mcm_application_ci_id',0) > 0:
                 existingDts = existingApp.find_children_by_name(node_name='DeploymentType')
@@ -2174,8 +2221,8 @@ class McmSDMPackageXMLGenerator(Processor):
             application = XmlNodeAsDict(NodeName='Application',Attributes=app_attributes)
             # Append display info
             self.output("Creating DisplayInfo", 2)
-            configuredDisplayInfo = app.get('DisplayInfo',{})
-            configuredInfos = configuredDisplayInfo.get('Infos',[])
+            configuredDisplayInfo = app.get('DisplayInfo') or {}
+            configuredInfos = configuredDisplayInfo.get('Infos') or []
             self.output("Getting details for any configured icons.", 3)
             iconFileUnixPaths = []
             if app.get('IconFileUnixPath','') != '':
@@ -2198,7 +2245,7 @@ class McmSDMPackageXMLGenerator(Processor):
             # Get UserCategory info
             self.output("Getting UserCategory details.", 3)
             userCategoryNames = []
-            for c in app.get('UserCategories',[]):
+            for c in (app.get('UserCategories') or []):
                 userCategoryNames.append(c)
             for namegroup in [y.get('UserCategories') for y in configuredInfos if len(y.get('UserCategories',[])) > 0]:
                 for n in namegroup:

@@ -71,7 +71,7 @@ class McmObjectMover(Processor):
     def get_mcm_object_type_maps() -> dict:
         """Return a dict of mcm object names"""
 
-    def get_mcm_object_type_id(self,) -> int:
+    def get_mcm_object_type_id(self,object_key) -> int:
         """Return the unique id that MCM assigns to an object id for use in security scope assignment by querying the SMS_SecuredCategoryMembership for the object."""
         self.output(f"Getting ObjectTypeID for {object_key}")
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_SecuredCategoryMembership?$filter=startsWith(ObjectKey,'{self.object_key}') eq true"
@@ -150,7 +150,6 @@ class McmObjectMover(Processor):
             if (current_object_path_string := str(self.env.get('current_object_path'))) != 'None':
                 container_node_class = object_class
                 current_object_path_string = f"{container_node_class}:{current_object_path_string}".lower()
-                pass
             elif self.uses_revisions(object_class):
                 self.output(f"{object_class} objects use revisions.", 3)
                 container_node_class = f"{object_class}Latest"
@@ -172,22 +171,30 @@ class McmObjectMover(Processor):
             else:
                 raise ProcessorError("Unhandled exception while resolving object path.")
             target_object_path_string = f"{container_node_class}:{self.env.get('target_object_path')}".lower()
-            if list(folder_map['by_lower_type_and_path'].keys()).__contains__(current_object_path_string) == False:
+            if current_object_path_string.endswith(":/") == False and list(folder_map['by_lower_type_and_path'].keys()).__contains__(current_object_path_string) == False:
                 self.output(f"Current object path: {current_object_path_string}\nFolder Map: {json.dumps(folder_map)}", 3)
                 raise ProcessorError("Could not resolve current object path.")
-            if list(folder_map['by_lower_type_and_path'].keys()).__contains__(target_object_path_string) == False:
+            if target_object_path_string.endswith(":/") == False and list(folder_map['by_lower_type_and_path'].keys()).__contains__(target_object_path_string) == False:
                 self.output(f"Target object path: {target_object_path_string}\nFolder Map: {json.dumps(folder_map)}", 3)
                 raise ProcessorError("Could not resolve target object path.")
-            if folder_map['by_lower_type_and_path'][target_object_path_string]['ContainerNodeID'] == folder_map['by_lower_type_and_path'][current_object_path_string]['ContainerNodeID']:
+            if current_object_path_string.endswith(":/"):
+                current_container_node_id = 0
+            else:
+                current_container_node_id = folder_map['by_lower_type_and_path'][current_object_path_string]['ContainerNodeID']
+            if target_object_path_string.endswith(":/"):
+                target_container_node_id = 0
+            else:
+                target_container_node_id = folder_map['by_lower_type_and_path'][target_object_path_string]['ContainerNodeID']
+            if target_container_node_id == current_container_node_id:
                 self.output("Object is already a member of the target folder. Nothing to do.", 2)
                 return
             self.output("The object is not a member of the target folder. Constructing request parameters", 3)
             url = f"https://{self.fqdn}/AdminService/wmi/SMS_ObjectContainerItem.MoveMembers"
             body = {
                 "InstanceKeys": [object_key],
-                "ContainerNodeID": folder_map['by_lower_type_and_path'][current_object_path_string]['ContainerNodeID'],
-                "TargetContainerNodeID": folder_map['by_lower_type_and_path'][target_object_path_string]['ContainerNodeID'],
-                "ObjectType": folder_map['by_lower_type_and_path'][target_object_path_string]['ObjectType']
+                "ContainerNodeID": current_container_node_id,
+                "TargetContainerNodeID": target_container_node_id,
+                "ObjectType": folder_map['by_lower_type_and_path'].get(target_object_path_string,{}).get('ObjectType',folder_map['by_lower_type_and_path'].get(current_object_path_string,{}).get('ObjectType'))
             }
             self.output(f"Request parameters: {json.dumps(body)}",3)
             move_response = requests.request(

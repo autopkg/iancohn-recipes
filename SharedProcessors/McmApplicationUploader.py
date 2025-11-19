@@ -330,6 +330,9 @@ class McmApplicationUploader(Processor):
             self.output(f"Parsing response: {type(postResponse).__name__}",3)
             postResponseJson = postResponse.json()
             self.output("Got Json body from response", 3)
+            if postResponseJson.__contains__("error"):
+                self.output(f"\tError Code: {postResponseJson['error']['code']}\n\tError Message: {postResponseJson['error']['message']}")
+                self.output(json.dumps(postResponseJson), 4)
             export_properties:dict = self.env.get('response_export_properties',self.input_variables['response_export_properties']['default'])
             self.output(f"export_properties config: \n\n{json.dumps(export_properties)}", 3)
             self.output("Setting the value of specified export properties",2)
