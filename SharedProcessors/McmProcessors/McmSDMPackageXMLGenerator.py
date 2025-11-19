@@ -22,19 +22,18 @@ import json
 import string
 import random
 import base64
-import sys
 
 from ctypes import c_int32
 from datetime import datetime
 from enum import Enum,auto
-from os import path,walk,listdir
+from os import path,walk
 from requests_ntlm import HttpNtlmAuth
 from PIL import Image
 from io import BytesIO
 from lxml import etree
 from copy import deepcopy
 from pathlib import Path
-from autopkglib import Processor, ProcessorError, get_autopkg_version
+from autopkglib import Processor, ProcessorError
 
 # Helper functions
 def try_cast(type_name,value,default=None):
@@ -491,12 +490,6 @@ def new_content_importer(content_location:str,content_location_local:str,content
     content_items = files + empty_dirs
     for c in content_items:
         content_files.append(new_content_file(pathname=c,unix_root=content_location_local))
-    #for root, dirs, file in walk(content_location_local):
-    #    for filename in file:
-    #        full_name = path.join(root, filename)
-    #        content_files.append(new_content_file(pathname=full_name,unix_root=content_location_local))
-    #    if not file:
-    #        content_files.append(new_content_file(pathname=(root.rstrip('/') + "/"),unix_root=content_location_local))
     importer.append_child_node(content_files)
     location = XmlNodeAsDict(NodeName='Location')
     if content_location is not None and len(content_location) > 0 and content_location[-1] != "\\":
@@ -1567,7 +1560,6 @@ class McmSDMPackageXMLGenerator(Processor):
             raise ProcessorError(e)
 
     def add_install_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
-        #print(f"Executing {sys._getframe().f_code.co_name}")
         try:
             visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
         except:
