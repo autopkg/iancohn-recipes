@@ -64,20 +64,6 @@ class McmAppGetter(Processor):
                 "The 'select_value_index' option may also be specified to indicate which value to select from the xpath result set (default is '*' (return all values as an array list)). "
                 "Positive or negative integers may be specified to select a specific index from the result set (0-based). Negative integers count from the end of the result set (-1 is the last item))."
         }
-        #"mcm_site_server_fqdn_is_cmg": {
-        #    "required": False,
-        #    "description": "If set to True, the fqdn is interpreted as a cloud management gateway.",
-        #    "default": False
-        #},
-        #"mcm_site_code": {
-        #    "required": True,
-        #    "description": "The Site Code for the mcm site."
-        #},
-        #"output_var_name": {
-        #    "required": False,
-        #    "description":
-        #        "Output variable name. Defaults to 'mcm_scope_id'"
-        #}
     }
     output_variables = {
         "mcm_scope_id": {

@@ -39,21 +39,7 @@ class McmScopeIdGetter(Processor):
         "mcm_site_server_fqdn": {
             "required": True,
             "description": "The FQDN of the site server. Ex. mcm.domain.com"
-        },
-        #"mcm_site_server_fqdn_is_cmg": {
-        #    "required": False,
-        #    "description": "If set to True, the fqdn is interpreted as a cloud management gateway.",
-        #    "default": False
-        #},
-        #"mcm_site_code": {
-        #    "required": True,
-        #    "description": "The Site Code for the mcm site."
-        #},
-        #"output_var_name": {
-        #    "required": False,
-        #    "description":
-        #        "Output variable name. Defaults to 'mcm_scope_id'"
-        #}
+        }
     }
     output_variables = {
         "mcm_scope_id": {
