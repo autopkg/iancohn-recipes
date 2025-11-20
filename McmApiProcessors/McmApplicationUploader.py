@@ -28,12 +28,16 @@ from autopkglib import Processor, ProcessorError
 
 # Utility
 def try_cast(type_name,value,default=None):
+    """Cast the supplied value as the indicated type. If it cannot cast,
+    return a default value
+    """
     try:
         return type_name(value)
     except:
         return default
 
 class XmlAttributeAsDict(dict):
+    """Allow XML attributes to be represented as dict objects"""
     def __init__(self,Name:str,Value:any):
         super().__init__({
             'Name': Name,
@@ -41,9 +45,11 @@ class XmlAttributeAsDict(dict):
         })
 
 class XmlNodeAsDict(dict):
+    """Stub class to allow XmlNodeAsDict to nest inside of itself"""
     pass
 
 class XmlNodeAsDict(dict):
+    """Represent an etree.Element object as a dict"""
     instance_map = {}
     instance_map_by_external_id = {}
     def __init__(self,NodeName:str,Attributes:list[XmlAttributeAsDict]=[],ChildNodes:list[XmlNodeAsDict]=None,
@@ -65,6 +71,9 @@ class XmlNodeAsDict(dict):
             XmlNodeAsDict.instance_map_by_external_id[f"{external_reference_id}"] = self
     @classmethod
     def convert_element_to_dict(cls,element:etree.Element,namespace_mode:str='PersistAsAttribute',parent_namespace:dict=None,is_root:bool=True)->XmlNodeAsDict:
+        """Convert an etree.Element object to XmlNodeAsDict class. Used 
+        to import existing XML objects
+        """
         class NamespaceMode(Enum):
             Maintain = "Maintain"
             StripRecursive = "StripRecursive"
@@ -92,10 +101,14 @@ class XmlNodeAsDict(dict):
         return newXmlNodeAsDict
     @classmethod
     def from_xml_string(cls,xml_string:str,namespace_mode:str)->XmlNodeAsDict:
+        """Convert an XML string into an XmlNodeAsDict instance"""
         xml = etree.XML(xml_string)
         return XmlNodeAsDict.convert_element_to_dict(element=xml,namespace_mode=namespace_mode)
     @classmethod
     def from_dict(cls, data):
+        """Convert an existing dict to an XmlNodeAsDict instance. Useful
+        if importing a dict which has been saved to a file as json
+        """
         instance = cls(data)
         if 'ChildNodes' in instance and isinstance(instance('ChildNodes',list)):
             instance['ChildNodes'] = [
@@ -104,19 +117,30 @@ class XmlNodeAsDict(dict):
         return instance
     @classmethod
     def from_json(cls, json_string):
+        """Convert an XmlNodeAsDict object which has been stored as JSON
+        back to an XmlNodeAsDict instance
+        """
         data = json.loads(json_string)
         return cls.from_dict(data)
     def append_child_node(self,ChildNodes:list[XmlNodeAsDict]):
+        """Append a list of XmlNodeAsDict instances to the ChildNodes
+        of the instance on which this method is called
+        """
         for n in ChildNodes:
             self['ChildNodes'].append(n)
     def set_node_inner_text(self,NodeInnerText:str):
+        """Overwrite the existing NodeInnerText with the supplied string"""
         self['NodeInnerText'] = NodeInnerText
     def has_children(self):
+        """Return True if the XmlNodeAsDict instance's ChildNodes contains 1
+        or more XmlNodeAsDict instances
+        """
         if len(self.get('ChildNodes',[])) == 0:
             return False
         else:
             return True
     def convert_to_xml(self)->etree.Element:
+        """Convert the current instance to an etree.Element object"""
         params = {}
         if isinstance(self.get('nsmap',None), dict):
             default_ns = self['nsmap'].get(None) if self['nsmap'] else None
@@ -140,20 +164,26 @@ class XmlNodeAsDict(dict):
             node.append(child)
         return node
     def to_xml_string(self,xml_declaration:bool=None,encoding:str='utf-16',pretty_print:bool=True)->str:
+        """Convert the current instance to a raw xml string"""
         xml = self.convert_to_xml()
         include_xml_declaration = xml_declaration if xml_declaration is not None else self.get('xml_declaration',False)
         xml_string = etree.tostring(xml,pretty_print=pretty_print,xml_declaration=include_xml_declaration,encoding=encoding).decode(encoding)
         return xml_string
     def get_attribute_value(self,attribute_name:str)->str:
+        """Return the Value property for the XmlAttributeAsDict instance
+        attached to this instance for the given attribute name
+        """
         if (attribute_name,'') == '':
             raise ValueError("Must specify an attribute name to retrieve.")
         result = next((x.get('Value',None) for x in self.get('Attributes',[]) if x.get('Name','') == attribute_name), None)
         return result
     @property
     def LogicalName(self):
+        """Return the LogicalName attribute value for this instance"""
         return self.get_attribute_value(attribute_name='LogicalName')
     @property
     def ResourceId(self):
+        """Return the ResourceId attribute value for this instance"""
         return self.get_attribute_value(attribute_name='ResourceId')
     @classmethod
     def from_xml_string_with_tracking(cls,xml_string:str):
@@ -206,12 +236,16 @@ class XmlNodeAsDict(dict):
             new_node.append_child_node([child_node])
         return new_node
     def find_children_by_name(self,node_name:str) -> list:
+        """Return direct children of this XmlNodeAsDict instance where
+        the tag/node name matches the given string
+        """
         return [child for child in self.get('ChildNodes',[]) if child.get('NodeName') == node_name]
 
 __all__ = ["McmApplicationUploader"]
 
 class McmApplicationUploader(Processor):
-    description = """AutoPkg Processor to connect to an MCM Admin Service and retrieve an application object, if it exists."""
+    description = """AutoPkg Processor to connect to an MCM Admin Service 
+        and retrieve an application object, if it exists"""
     input_variables = {
         "keychain_password_service": {
             "required": False,
@@ -265,16 +299,22 @@ class McmApplicationUploader(Processor):
     __doc__ = description
 
     def convert_site_id_to_scope_id(self,siteId:str) -> str:
+        """Convert a SiteID string to a scope id"""
         siteIdGuid = siteId.replace('{','').replace('}','')
         scopeId = f"ScopeId_{siteIdGuid}"
         return scopeId
 
     def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+        """Get the credential from keychain using the supplied parameters
+        and return an HttpNtlmAuth object from the retrieved details
+        """
         password = keyring.get_password(keychainServiceName,keychainUsername)
         return HttpNtlmAuth(keychainUsername,password)
 
     def strip_namespaces(element):
-        """Remove all namespaces from an XML element for easier XPath query support"""
+        """Remove all namespaces from an XML element for easier XPath 
+        query support
+        """
         for e in element.iter():
             if e.tag is not etree.Comment:
                 e.tag = etree.QName(e).localname
