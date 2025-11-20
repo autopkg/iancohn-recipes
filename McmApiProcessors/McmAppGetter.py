@@ -16,14 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = ["McmAppGetter"]
+
 import requests
-import keyring
-from requests_ntlm import HttpNtlmAuth
 from lxml import etree
 
-from autopkglib import Processor, ProcessorError
+import keyring
+from requests_ntlm import HttpNtlmAuth
 
-__all__ = ["McmAppGetter"]
+from autopkglib import Processor, ProcessorError
 
 class McmAppGetter(Processor):
     description = """AutoPkg Processor to connect to an MCM Admin
