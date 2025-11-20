@@ -274,7 +274,7 @@ __all__ = ["McmApplicationUploader"]
 
 class McmApplicationUploader(Processor):
     description = """AutoPkg Processor to connect to an MCM Admin
-    Service and retrieve an application object, if it exists
+    Service and upload an application object, if it exists
     """
     input_variables = {
         "keychain_password_service": {
