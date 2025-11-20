@@ -11,32 +11,34 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS, 
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import keyring
+
 import requests
 import uuid
 import json
 import string
 import random
 import base64
-
 from ctypes import c_int32
 from datetime import datetime
-from enum import Enum,auto
-from os import path,walk
-from requests_ntlm import HttpNtlmAuth
-from PIL import Image
+from enum import Enum, auto
+from os import path, walk
 from io import BytesIO
 from lxml import etree
 from copy import deepcopy
 from pathlib import Path
+
+import keyring
+from requests_ntlm import HttpNtlmAuth
+from PIL import Image
+
 from autopkglib import Processor, ProcessorError
 
 # Helper functions
-def try_cast(type_name,value,default=None):
+def try_cast(type_name, value, default = None):
     """Cast the supplied value as the indicated type. If it cannot
     cast, return a default value
     """
@@ -45,11 +47,11 @@ def try_cast(type_name,value,default=None):
     except:
         return default
 
-def can_cast(type_name,value) -> bool:
+def can_cast(type_name, value) -> bool:
     """Return True if the supplied value can cast as the supplied
     type name
     """
-    return try_cast(type_name,value) is not None
+    return try_cast(type_name, value) is not None
 
 def get_int32_from_uuid(uuid:uuid.UUID):
     """Deterministically create an int from a given uuid"""
@@ -57,25 +59,25 @@ def get_int32_from_uuid(uuid:uuid.UUID):
     uuid_int = abs(c_int32(uuid_hash).value)
     return uuid_int
 
-def get_identifier_from_string(string:str):
+def get_identifier_from_string(string: str):
     """Return the simple uuid/guid string from an MCM identifier
     in '[Object Type]_[Guid] format'
     """
-    return string.split('_',1)[1]
+    return string.split('_', 1)[1]
 
-def get_relative_windows_path(pathname:str,unix_root:str):
+def get_relative_windows_path(pathname: str, unix_root: str):
     """Convert a unix path to a relative path compliant with
     Windows operating systems. Calculate the path relative to the
     supplied root unix path
     """
-    return pathname.replace(unix_root,'',1).replace('/','\\')
+    return pathname.replace(unix_root, '', 1).replace('/', '\\')
 
 def convert_site_id_to_scope_id(site_id: str) -> str:
     """Convert a SiteID string to a scope id"""
     site_id_clean = site_id.replace('{', '').replace('}', '')
     return f"ScopeId_{site_id_clean}"
 
-def get_nsmap(namespace_name:str,include_xsi:bool=False)->dict:
+def get_nsmap(namespace_name: str, include_xsi:bool = False) -> dict:
     """Create a namespace map object for use in etree.Element
     objects
     """
@@ -107,7 +109,7 @@ def get_nsmap(namespace_name:str,include_xsi:bool=False)->dict:
     else:
         raise ProcessorError('Unhandled Namespace.')
     output:dict = {
-        'ns': ns,
+        'ns': ns, 
         'nsmap': nsmap
     }
     if include_xsi == True:
@@ -131,30 +133,30 @@ class RebootBehavior(Enum):
 
 class RequirementRuleDataType(Enum):
     """Valid RequirementRuleDataType values"""
-    Base64                       = "Base64"
-    Boolean                      = "Boolean"
-    BooleanArray                 = "BooleanArray"
-    CIMDateTime                  = "CIMDateTime"
-    CIMDateTimeArray             = "CIMDateTimeArray"
-    Complex                      = "Complex"
-    DateTime                     = "DateTime"
-    DateTimeArray                = "DateTimeArray"
-    Double                       = "Double"
-    DoubleArray                  = "DoubleArray"
-    FileSystemAccessControl      = "FileSystemAccessControl"
+    Base64 = "Base64"
+    Boolean = "Boolean"
+    BooleanArray = "BooleanArray"
+    CIMDateTime = "CIMDateTime"
+    CIMDateTimeArray = "CIMDateTimeArray"
+    Complex = "Complex"
+    DateTime = "DateTime"
+    DateTimeArray = "DateTimeArray"
+    Double = "Double"
+    DoubleArray  = "DoubleArray"
+    FileSystemAccessControl = "FileSystemAccessControl"
     FileSystemAccessControlArray = "FileSystemAccessControlArray"
-    FileSystemAttribute          = "FileSystemAttribute"
-    FileSystemAttributeArray     = "FileSystemAttributeArray"
-    Int64                        = "Int64"
-    Int64Array                   = "Int64Array"
-    Other                        = "Other"
-    RegistryAccessControl        = "RegistryAccessControl"
-    RegistryAccessControlArray   = "RegistryAccessControlArray"
-    String                       = "String"
-    StringArray                  = "StringArray"
-    Version                      = "Version"
-    VersionArray                 = "VersionArray"
-    Xml                          = "Xml"
+    FileSystemAttribute = "FileSystemAttribute"
+    FileSystemAttributeArray = "FileSystemAttributeArray"
+    Int64 = "Int64"
+    Int64Array = "Int64Array"
+    Other = "Other"
+    RegistryAccessControl = "RegistryAccessControl"
+    RegistryAccessControlArray  = "RegistryAccessControlArray"
+    String = "String"
+    StringArray = "StringArray"
+    Version = "Version"
+    VersionArray = "VersionArray"
+    Xml = "Xml"
 
 class ArgumentType(Enum):
     """Valid ArgumentType values"""
@@ -193,9 +195,10 @@ class ExecutionContext(Enum):
     Any = "Any"
     User = "User"
     System = "System"
+
 BehaviorTypeToContext = {
-    "InstallForSystem":"System",
-    "InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser": "Any",
+    "InstallForSystem":"System", 
+    "InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser": "Any", 
     "InstallForUser": "User"
 }
 
@@ -270,27 +273,27 @@ class ActionType(Enum):
 
 class DetectionType(Enum):
     """Valid DetectionType values"""
-    File                = "File"
-    Folder              = "Folder"
-    RegistryKey         = "RegistryKey"
-    RegistryKeyValue    = "RegistryKeyValue"
-    MSI                 = "MSI"
-    Group               = "Group"
-    CustomScript        = "CustomScript"
+    File = "File"
+    Folder = "Folder"
+    RegistryKey = "RegistryKey"
+    RegistryKeyValue = "RegistryKeyValue"
+    MSI = "MSI"
+    Group = "Group"
+    CustomScript = "CustomScript"
 
 PropertyPathDataType = {
     """Map PropertyPaths to valid DataType values"""
-    "DateCreated": "DateTime",
-    "DateModified": "DateTime",
-    "ProductVersion": "Version",
-    "Size": "Int64",
+    "DateCreated": "DateTime", 
+    "DateModified": "DateTime", 
+    "ProductVersion": "Version", 
+    "Size": "Int64", 
     "Version": "Version"
 }
 
 # Root
 class McmIdentifier(dict):
     """A class used to create valid identifiers for use in MCM"""
-    def __init__(self,guid:str=None,resource_id:int=None):
+    def __init__(self, guid: str = None, resource_id:int = None):
         if guid is None:
             guid = uuid.uuid4()
         else:
@@ -300,7 +303,7 @@ class McmIdentifier(dict):
             self.resource_id = get_int32_from_uuid(guid)
         else:
             self.resource_id = resource_id
-    def get_logical_name(self,object_type_name:str=None,object:any=None):
+    def get_logical_name(self, object_type_name: str = None, object:any = None):
         """Return a logical name identifier given an object type"""
         if (object_type_name is None or object_type_name == ''):
             if object is None:
@@ -317,10 +320,10 @@ class McmIdentifier(dict):
 
 class XmlAttributeAsDict(dict):
     """Allow XML attributes to be represented as dict objects"""
-    def __init__(self,Name:str,Value:any):
+    def __init__(self, Name: str, Value:any):
         super().__init__({
-            'Name': Name,
-            'Value':  try_cast(str,Value,'')
+            'Name': Name, 
+            'Value':  try_cast(str, Value, '')
         })
 
 class XmlNodeAsDict(dict):
@@ -331,8 +334,8 @@ class XmlNodeAsDict(dict):
     """Represent an etree.Element object as a dict"""
     instance_map = {}
     instance_map_by_external_id = {}
-    def __init__(self,NodeName:str,Attributes:list[XmlAttributeAsDict]=[],ChildNodes:list[XmlNodeAsDict]=None,
-                 NodeInnerText:str=None,nsmap:dict=None,xml_declaration:bool=False,external_reference_id:int=None,group_ids:list[int]=[]):
+    def __init__(self, NodeName: str, Attributes: list[XmlAttributeAsDict] = [], ChildNodes: list[XmlNodeAsDict] = None, 
+                 NodeInnerText: str = None, nsmap:dict = None, xml_declaration:bool = False, external_reference_id:int = None, group_ids: list[int] = []):
         super().__init__({})
         self['NodeName'] = NodeName
         if Attributes is not None and len(Attributes) > 0:
@@ -349,7 +352,7 @@ class XmlNodeAsDict(dict):
         if external_reference_id is not None:
             XmlNodeAsDict.instance_map_by_external_id[f"{external_reference_id}"] = self
     @classmethod
-    def convert_element_to_dict(cls,element:etree.Element,namespace_mode:str='PersistAsAttribute',parent_namespace:dict=None,is_root:bool=True)->XmlNodeAsDict:
+    def convert_element_to_dict(cls, element:etree.Element, namespace_mode: str = 'PersistAsAttribute', parent_namespace:dict = None, is_root:bool = True) -> XmlNodeAsDict:
         """Convert an etree.Element object to XmlNodeAsDict class. Used
         to import existing XML objects
         """
@@ -358,7 +361,7 @@ class XmlNodeAsDict(dict):
             StripRecursive = "StripRecursive"
             PersistAsAttribute = "PersistAsAttribute"
         params = {
-            "NodeName": etree.QName(element).localname,
+            "NodeName": etree.QName(element).localname, 
             "Attributes": []
         }
         if namespace_mode == 'Maintain':
@@ -366,23 +369,23 @@ class XmlNodeAsDict(dict):
         if is_root:
             parent_namespace = element.nsmap
             params['nsmap'] = element.nsmap
-        if namespace_mode == 'PersistAsAttribute' and parent_namespace is not None and element.nsmap != parent_namespace:
-            params['Attributes'].append(XmlAttributeAsDict(Name='xmlns',Value=element.nsmap[None]))
+        if namespace_mode == 'PersistAsAttribute' and parent_namespace is not None and element.nsmap !=  parent_namespace:
+            params['Attributes'].append(XmlAttributeAsDict(Name = 'xmlns', Value = element.nsmap[None]))
         else:
             pass
-        if element.text is not None and element.text != '':
+        if element.text is not None and element.text !=  '':
             params["NodeInnerText"] = element.text
         for a in element.attrib.keys():
-            params["Attributes"].append(XmlAttributeAsDict(Name=a,Value=element.attrib[a]))
+            params["Attributes"].append(XmlAttributeAsDict(Name = a, Value = element.attrib[a]))
         newXmlNodeAsDict = cls(**params)
         for c in element.getchildren():
-            newXmlNodeAsDict.append_child_node([XmlNodeAsDict.convert_element_to_dict(c,namespace_mode=namespace_mode,parent_namespace=element.nsmap,is_root=False)])
+            newXmlNodeAsDict.append_child_node([XmlNodeAsDict.convert_element_to_dict(c, namespace_mode = namespace_mode, parent_namespace = element.nsmap, is_root = False)])
         return newXmlNodeAsDict
     @classmethod
-    def from_xml_string(cls,xml_string:str,namespace_mode:str)->XmlNodeAsDict:
+    def from_xml_string(cls, xml_string: str, namespace_mode: str) -> XmlNodeAsDict:
         """Convert an XML string into an XmlNodeAsDict instance"""
         xml = etree.XML(xml_string)
-        return XmlNodeAsDict.convert_element_to_dict(element=xml,namespace_mode=namespace_mode)
+        return XmlNodeAsDict.convert_element_to_dict(element = xml, namespace_mode = namespace_mode)
     @classmethod
     def from_dict(cls, data):
         """Convert an existing dict to an XmlNodeAsDict instance.
@@ -390,7 +393,7 @@ class XmlNodeAsDict(dict):
         json
         """
         instance = cls(data)
-        if 'ChildNodes' in instance and isinstance(instance('ChildNodes',list)):
+        if 'ChildNodes' in instance and isinstance(instance('ChildNodes', list)):
             instance['ChildNodes'] = [
                 cls.from_dict(child) if isinstance(child, dict) else child for child in instance['ChildNodes']
             ]
@@ -402,13 +405,13 @@ class XmlNodeAsDict(dict):
         """
         data = json.loads(json_string)
         return cls.from_dict(data)
-    def append_child_node(self,ChildNodes:list[XmlNodeAsDict]):
+    def append_child_node(self, ChildNodes: list[XmlNodeAsDict]):
         """Append a list of XmlNodeAsDict instances to the ChildNodes
         of the instance on which this method is called
         """
         for n in ChildNodes:
             self['ChildNodes'].append(n)
-    def set_node_inner_text(self,NodeInnerText:str):
+    def set_node_inner_text(self, NodeInnerText: str):
         """Overwrite the existing NodeInnerText with the supplied
         string
         """
@@ -417,26 +420,26 @@ class XmlNodeAsDict(dict):
         """Return True if the XmlNodeAsDict instance's ChildNodes
         contains one or more XmlNodeAsDict instances
         """
-        if len(self.get('ChildNodes',[])) == 0:
+        if len(self.get('ChildNodes', [])) == 0:
             return False
         else:
             return True
-    def convert_to_xml(self)->etree.Element:
+    def convert_to_xml(self) -> etree.Element:
         """Convert the current instance to an etree.Element object"""
         params = {}
-        if isinstance(self.get('nsmap',None), dict):
+        if isinstance(self.get('nsmap', None), dict):
             default_ns = self['nsmap'].get(None) if self['nsmap'] else None
             prefixed_ns = {k: v for k, v in self['nsmap'].items() if k is not None} if self['nsmap'] else {}
             params['nsmap'] = prefixed_ns if prefixed_ns else None
-        for a in self.get('Attributes',[]):
+        for a in self.get('Attributes', []):
             params[a['Name']] = a['Value']
         tag = f"{{{default_ns}}}{self['NodeName']}" if default_ns else self['NodeName']
         params["_tag"] = tag
         node = etree.Element(**params)
-        if self.get('NodeInnerText','') > '':
+        if self.get('NodeInnerText', '') > '':
             node.text = self.get('NodeInnerText')
-        for c in self.get('ChildNodes',[]):
-            if (c is None or isinstance(c,str)):
+        for c in self.get('ChildNodes', []):
+            if (c is None or isinstance(c, str)):
                 print(f"This will probably break. c: {c}")
                 print(f"#####################")
                 print(f"JSON:\n\t{json.dumps(self)}")
@@ -445,38 +448,38 @@ class XmlNodeAsDict(dict):
             child = c.convert_to_xml()
             node.append(child)
         return node
-    def to_xml_string(self,xml_declaration:bool=None,encoding:str='utf-16',pretty_print:bool=True)->str:
+    def to_xml_string(self, xml_declaration:bool = None, encoding: str = 'utf-16', pretty_print:bool = True) -> str:
         """Convert the current instance to a raw xml string"""
         xml = self.convert_to_xml()
-        include_xml_declaration = xml_declaration if xml_declaration is not None else self.get('xml_declaration',False)
-        xml_string = etree.tostring(xml,pretty_print=pretty_print,xml_declaration=include_xml_declaration,encoding=encoding).decode(encoding)
+        include_xml_declaration = xml_declaration if xml_declaration is not None else self.get('xml_declaration', False)
+        xml_string = etree.tostring(xml, pretty_print = pretty_print, xml_declaration = include_xml_declaration, encoding = encoding).decode(encoding)
         return xml_string
-    def get_attribute_value(self,attribute_name:str)->str:
+    def get_attribute_value(self, attribute_name: str) -> str:
         """Return the Value property for the XmlAttributeAsDict
         instance attached to this instance for the given attribute
         name
         """
-        if (attribute_name,'') == '':
+        if (attribute_name, '') == '':
             raise ValueError("Must specify an attribute name to retrieve.")
-        result = next((x.get('Value',None) for x in self.get('Attributes',[]) if x.get('Name','') == attribute_name), None)
+        result = next((x.get('Value', None) for x in self.get('Attributes', []) if x.get('Name', '') == attribute_name), None)
         return result
     @property
     def LogicalName(self):
         """Return the LogicalName attribute value for this instance"""
-        return self.get_attribute_value(attribute_name='LogicalName')
+        return self.get_attribute_value(attribute_name = 'LogicalName')
     @property
     def ResourceId(self):
         """Return the ResourceId attribute value for this instance"""
-        return self.get_attribute_value(attribute_name='ResourceId')
+        return self.get_attribute_value(attribute_name = 'ResourceId')
     @classmethod
-    def from_xml_string_with_tracking(cls,xml_string:str):
+    def from_xml_string_with_tracking(cls, xml_string: str):
         """Parse XML and track explicit namespace declarations"""
         explicit_ns_map = {}
         element_stack = []
         context = etree.iterparse(
-            BytesIO(xml_string.encode('UTF-8')),
-            events=('start', 'start-ns', 'end'),
-            remove_blank_text=False
+            BytesIO(xml_string.encode('UTF-8')), 
+            events = ('start', 'start-ns', 'end'), 
+            remove_blank_text = False
         )
         pending_ns = {}
         for event, data in context:
@@ -492,17 +495,17 @@ class XmlNodeAsDict(dict):
         root = context.root
         return cls._convert_element_with_tracking(root, explicit_ns_map)
     @classmethod
-    def _convert_element_with_tracking(cls,element:etree.Element,explicit_ns_map:dict):
+    def _convert_element_with_tracking(cls, element:etree.Element, explicit_ns_map:dict):
         """Convert element, preserving explicit namespace
         declarations
         """
         element_id = id(element)
         params = {
-            "NodeName": etree.QName(element).localname,
+            "NodeName": etree.QName(element).localname, 
             "Attributes": []
         }
         if element_id in explicit_ns_map:
-            params["Attributes"].append(XmlAttributeAsDict(Name='xmlns',Value=explicit_ns_map[element_id]['']))
+            params["Attributes"].append(XmlAttributeAsDict(Name = 'xmlns', Value = explicit_ns_map[element_id]['']))
         else:
             pass
         if element.text and element.text.strip():
@@ -511,171 +514,211 @@ class XmlNodeAsDict(dict):
             if attr_name.startswith('{http://www.w3.org/2000/xmlns/}'):
                 continue
             params["Attributes"].append(XmlAttributeAsDict(
-                    Name=etree.QName(attr_name).localname,
-                    Value=element.attrib[attr_name]
+                    Name = etree.QName(attr_name).localname, 
+                    Value = element.attrib[attr_name]
                 )
             )
         new_node = cls(**params)
         for child in element:
-            child_node = cls._convert_element_with_tracking(child,explicit_ns_map)
+            child_node = cls._convert_element_with_tracking(child, explicit_ns_map)
             new_node.append_child_node([child_node])
         return new_node
-    def find_children_by_name(self,node_name:str) -> list:
+    def find_children_by_name(self, node_name: str) -> list:
         """Return direct children of this XmlNodeAsDict instance where
         the tag/node name matches the given string
         """
-        return [child for child in self.get('ChildNodes',[]) if child.get('NodeName') == node_name]
+        return [child for child in self.get('ChildNodes', []) if child.get('NodeName') == node_name]
 
 def new_resource_id_attribute() -> XmlAttributeAsDict:
     """Utility function for quicker creation of a ResourceId
     XmlAttributeAsDict object
     """
-    attr = XmlAttributeAsDict(Name="ResourceId",Value=f"Res_{McmIdentifier().resource_id}")
+    attr = XmlAttributeAsDict(Name = "ResourceId", Value = f"Res_{McmIdentifier().resource_id}")
     return attr
 
 # Content
-def new_content_file(pathname:str,unix_root:str) -> XmlNodeAsDict:
+def new_content_file(pathname: str, unix_root: str) -> XmlNodeAsDict:
     """Return an XmlNodeAsDict object for the supplied file path"""
-    relative_windows_path = get_relative_windows_path(pathname,unix_root)
+    relative_windows_path = get_relative_windows_path(pathname, unix_root)
     if pathname.endswith("/"):
         size = 0
     else:        
         size = path.getsize(pathname)
-    return XmlNodeAsDict(NodeName="File",Attributes=[XmlAttributeAsDict(Name='Name',Value=relative_windows_path),
-                                                      XmlAttributeAsDict(Name='Size',Value=size)])
+    return XmlNodeAsDict(NodeName = "File", Attributes = [XmlAttributeAsDict(Name = 'Name', Value = relative_windows_path), 
+                                                      XmlAttributeAsDict(Name = 'Size', Value = size)])
 
 def new_content_importer(
-        content_location:str,content_location_local:str,
-        content_id:str=None,enable_peer_cache:bool=True,
-        fast_network_action:ContentHandlingMode=ContentHandlingMode['Download'],
-        slow_network_action:ContentHandlingMode=ContentHandlingMode['DoNothing']) -> XmlNodeAsDict:
+        content_location: str, content_location_local: str, 
+        content_id: str = None, enable_peer_cache: bool = True, 
+        fast_network_action: ContentHandlingMode  = 
+        ContentHandlingMode['Download'], 
+        slow_network_action: ContentHandlingMode  = 
+        ContentHandlingMode['DoNothing']
+        ) -> XmlNodeAsDict:
     """Create a new Content node as an XmlNodeAsDict object"""
     if content_id is None or content_id == '':
             content_id = f'Content_{uuid.uuid4().__str__()}'
-    importer = XmlNodeAsDict(NodeName='Content',Attributes=[XmlAttributeAsDict('ContentId',(content_id)),XmlAttributeAsDict(Name='Version',Value='1')],external_reference_id=id(content_location_local))
+    importer = XmlNodeAsDict(
+        NodeName = 'Content',
+        Attributes = [XmlAttributeAsDict('ContentId', (content_id)), XmlAttributeAsDict(Name = 'Version', Value = '1')], external_reference_id = id(content_location_local))
     content_files = []
-    if content_location_local[-1] != '/':
+    if content_location_local[-1] !=  '/':
         content_location_local = f"{content_location_local}/"
     files = []
     empty_dirs = []
-    for dirpath,dirnames,filenames in walk(content_location_local):
+    for dirpath, dirnames, filenames in walk(content_location_local):
         if filenames:
             for filename in filenames:
                 files.append(path.join(dirpath, str(filename)))
         else:
-            empty_dirs.append(path.join(dirpath,''))
-    files.sort(key=lambda p: (Path(p).parent, Path(p).name))
+            empty_dirs.append(path.join(dirpath, ''))
+    files.sort(key = lambda p: (Path(p).parent, Path(p).name))
     empty_dirs.sort()
     content_items = files + empty_dirs
     for c in content_items:
-        content_files.append(new_content_file(pathname=c,unix_root=content_location_local))
+        content_files.append(new_content_file(pathname = c, unix_root = content_location_local))
     importer.append_child_node(content_files)
-    location = XmlNodeAsDict(NodeName='Location')
-    if content_location is not None and len(content_location) > 0 and content_location[-1] != "\\":
+    location = XmlNodeAsDict(NodeName = 'Location')
+    if content_location is not None and len(content_location) > 0 and content_location[-1] !=  "\\":
         content_location = f"{content_location}\\"
         location.set_node_inner_text(content_location)
         importer.append_child_node([location])
-        peer_cache = XmlNodeAsDict(NodeName='PeerCache')
+        peer_cache = XmlNodeAsDict(NodeName = 'PeerCache')
         peer_cache.set_node_inner_text(f"{enable_peer_cache}".lower())
         importer.append_child_node([peer_cache])
-        on_fast_network = XmlNodeAsDict(NodeName='OnFastNetwork')
+        on_fast_network = XmlNodeAsDict(NodeName = 'OnFastNetwork')
         on_fast_network.set_node_inner_text(f"{fast_network_action.name}")
         importer.append_child_node([on_fast_network])
-        on_slow_network = XmlNodeAsDict(NodeName='OnSlowNetwork')
+        on_slow_network = XmlNodeAsDict(NodeName = 'OnSlowNetwork')
         on_slow_network.set_node_inner_text(f"{slow_network_action.name}")
         importer.append_child_node([on_slow_network])
     return importer
 
-def get_content_reference(content_importer:XmlNodeAsDict) -> XmlNodeAsDict:
+def get_content_reference(
+        content_importer: XmlNodeAsDict) -> XmlNodeAsDict:
     """Create an XmlNodeAsDict inistance that references the supplied
     content importer node
     """
     attributes = [
-        XmlAttributeAsDict(Name='ContentId',Value=content_importer.get_attribute_value(attribute_name='ContentId')),
-        XmlAttributeAsDict(Name='Version',Value=content_importer.get_attribute_value(attribute_name='Version'))
+        XmlAttributeAsDict(
+            Name = 'ContentId', 
+            Value = content_importer.get_attribute_value(
+                attribute_name = 'ContentId')
+                ), 
+        XmlAttributeAsDict(
+            Name = 'Version', 
+            Value = content_importer.get_attribute_value(
+                attribute_name = 'Version'
+                )
+            )
     ]
     reference = XmlNodeAsDict(
-        NodeName='Contents',ChildNodes=[
-            XmlNodeAsDict(NodeName='Content',Attributes=attributes)
+        NodeName = 'Contents', 
+        ChildNodes = [
+            XmlNodeAsDict(NodeName = 'Content', Attributes = attributes)
         ]
     )
     return reference
 
-def new_icon_resource(local_path:str,id_length:int=41,b64_encoding:str='utf-8',optimize:bool=True) -> XmlNodeAsDict:
+def new_icon_resource(
+        local_path: str, id_length: int = 41, 
+        b64_encoding: str = 'utf-8', 
+        optimize: bool = True
+        ) -> XmlNodeAsDict:
     """Inspect an icon .png file, encode the binary data, and return
     the the information as an XmlNodeAsDict instance
     """
     if not local_path.lower().endswith('.png'):
         raise ProcessorError("Only PNG files are supported for icons.")
     with Image.open(local_path) as old:
-        reduced = Image.new("RGB",old.size)
+        reduced = Image.new("RGB", old.size)
         reduced.paste(old)
         buffer = BytesIO()
-        reduced.save(buffer,format="PNG",optimize=optimize)
+        reduced.save(buffer, format = "PNG", optimize = optimize)
         _ = buffer.seek(0)
-        encoded = base64.b64encode(buffer.read()).decode(encoding=b64_encoding)
-    icon_id = f"Icon_p-{''.join(random.choices(string.ascii_letters + string.digits,k=id_length))}"
-    attributes = [XmlAttributeAsDict(Name='Id',Value=icon_id)]
-    data = XmlNodeAsDict(NodeName='Data',NodeInnerText=encoded)
-    icon_resource = XmlNodeAsDict(NodeName='Icon',Attributes=attributes,ChildNodes=[data])    
+        encoded = base64.b64encode(buffer.read())\
+            .decode(encoding = b64_encoding)
+    icon_id = f"Icon_p-{''.join(\
+        random.choices(string.ascii_letters + string.digits, k = id_length))}"
+    attributes = [XmlAttributeAsDict(Name = 'Id', Value = icon_id)]
+    data_node = XmlNodeAsDict(NodeName = 'Data', NodeInnerText = encoded)
+    icon_resource = XmlNodeAsDict(
+        NodeName = 'Icon', 
+        Attributes = attributes, 
+        ChildNodes = [data_node])
     return icon_resource
 
-def get_icon_reference(icon_resource:XmlNodeAsDict) -> XmlNodeAsDict:
+def get_icon_reference(icon_resource: XmlNodeAsDict) -> XmlNodeAsDict:
     """Create a XmlNodeAsDict instance which references the supplied
     icon node
     """
-    icon_id = icon_resource.get_attribute_value(attribute_name='Id')
-    icon_reference = XmlNodeAsDict(NodeName='Icon',Attributes=[XmlAttributeAsDict(Name='Id',Value=icon_id)])
+    icon_id = icon_resource.get_attribute_value(attribute_name = 'Id')
+    icon_reference = XmlNodeAsDict(
+        NodeName = 'Icon', 
+        Attributes = [XmlAttributeAsDict(Name = 'Id', Value = icon_id)]
+        )
     return icon_reference
 
 # User nodes
-def new_user(user_id:str) -> XmlNodeAsDict:
+def new_user(user_id: str) -> XmlNodeAsDict:
     """Create a user XmlNodeAsDict instance"""
     attributes = [
-        XmlAttributeAsDict(Name='Qualifier',Value='LogonName'),
-        XmlAttributeAsDict(Name='Id',Value=user_id)
+        XmlAttributeAsDict(Name = 'Qualifier', Value = 'LogonName'), 
+        XmlAttributeAsDict(Name = 'Id', Value = user_id)
     ]
-    user = XmlNodeAsDict(NodeName='User',Attributes=attributes)
+    user = XmlNodeAsDict(NodeName = 'User', Attributes = attributes)
     return user
 
-def new_owners_node(user_ids:list=[]) -> XmlNodeAsDict:
+def new_owners_node(user_ids: list = []) -> XmlNodeAsDict:
     """Create an owner XmlNodeAsDict instance"""
     user_nodes = []
     for u in user_ids:
         user_nodes.append(new_user(u))
-    owners_node = XmlNodeAsDict(NodeName='Owners',ChildNodes=user_nodes)
+    owners_node = XmlNodeAsDict(NodeName = 'Owners', ChildNodes = user_nodes)
     return owners_node
 
-def new_contacts_node(user_ids:list=[]) -> XmlNodeAsDict:
+def new_contacts_node(user_ids: list = []) -> XmlNodeAsDict:
     """Create a contacts XmlNodeAsDict instance from a list of user
     nodes
     """
     user_nodes = []
     for u in user_ids:
         user_nodes.append(new_user(u))
-    contacts_node = XmlNodeAsDict(NodeName='Contacts',ChildNodes=user_nodes)
+    contacts_node = XmlNodeAsDict(NodeName = 'Contacts', ChildNodes = user_nodes)
     return contacts_node
 # Requirements & Detection
-def new_operator(operator:str) -> XmlNodeAsDict:
+def new_operator(operator: str) -> XmlNodeAsDict:
     """Create an operator XmlNodeAsDict object"""
     try:
-        oprtr = Operator(operator)
+        _operator = Operator(operator)
     except:
         valid = ', '.join(f.value for f in Operator)
         raise ValueError(f"Invalid operator: '{operator}'. Valid: {valid}")
-    node = XmlNodeAsDict(NodeName='Operator',NodeInnerText=oprtr.name)
+    node = XmlNodeAsDict(NodeName = 'Operator', NodeInnerText = _operator.name)
     return node
 
-def new_annotation(display_name:str='',description='',include_xmlns:bool=False) -> XmlNodeAsDict:
+def new_annotation(
+        display_name: str = '', description: str = '', 
+        include_xmlns: bool = False) -> XmlNodeAsDict:
     """Create an annotation XmlNodeAsDict object"""
-    display_name_node = XmlNodeAsDict(NodeName='DisplayName',Attributes=[XmlAttributeAsDict(Name='Text',Value=display_name)])
-    description_node = XmlNodeAsDict(NodeName='Description',Attributes=[XmlAttributeAsDict(Name='Text',Value=description)])
-    annotation = XmlNodeAsDict(NodeName='Annotation',ChildNodes=[display_name_node,description_node])
+    display_name_node = XmlNodeAsDict(
+        NodeName = 'DisplayName', 
+        Attributes = [XmlAttributeAsDict(Name = 'Text', Value = display_name)]
+        )
+    description_node = XmlNodeAsDict(
+        NodeName = 'Description', 
+        Attributes = [XmlAttributeAsDict(Name = 'Text', Value = description)]
+        )
+    annotation = XmlNodeAsDict(
+        NodeName = 'Annotation', 
+        ChildNodes = [display_name_node, description_node])
     if include_xmlns:
-        annotation['Attributes'] = [XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('Rule')['ns'])]
+        annotation['Attributes'] = [
+            XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap('Rule')['ns'])
+            ]
     return annotation
 
-def new_constant_value(value:any,data_type:str):
+def new_constant_value(value: any, data_type: str) -> XmlNodeAsDict:
     """Create a constant value XmlNodeAsDict object"""
     try:
         if list(f.value for f in RequirementRuleDataType).__contains__(data_type):
@@ -686,13 +729,13 @@ def new_constant_value(value:any,data_type:str):
         valid = ', '.join(f.value for f in RequirementRuleDataType)
         raise ValueError(f"Invalid data type: '{data_type}'. Valid: {valid}")
     attributes = [
-        XmlAttributeAsDict(Name='Value',Value=value),
-        XmlAttributeAsDict(Name='DataType',Value=requirement_rule_data_type.name)
+        XmlAttributeAsDict(Name = 'Value', Value = value), 
+        XmlAttributeAsDict(Name = 'DataType', Value = requirement_rule_data_type.name)
     ]
-    constant_value = XmlNodeAsDict(NodeName='ConstantValue',Attributes=attributes)
+    constant_value = XmlNodeAsDict(NodeName = 'ConstantValue', Attributes = attributes)
     return constant_value
 
-def new_constant_value_list(constant_values:list) -> XmlNodeAsDict:
+def new_constant_value_list(constant_values: list) -> XmlNodeAsDict:
     """Create a constant value list XmlNodeAsDict object"""
     if len(constant_values or []) < 2:
         raise ValueError('At least 2 ConstantValue objects are required.')
@@ -701,326 +744,352 @@ def new_constant_value_list(constant_values:list) -> XmlNodeAsDict:
         if v is None:
             raise ValueError("constant value cannot be 'NoneType'")
         udt = v.get_attribute_value('DataType')
-        if udt is not None and udt != '' and not unique_data_types.__contains__(udt):
+        if udt is not None and udt !=  '' and not unique_data_types.__contains__(udt):
             unique_data_types.append(udt)
-    if len(unique_data_types) != 1:
+    if len(unique_data_types) !=  1:
         raise ValueError('ConstantValue objects must all be of the same DataType')
-    constant_values.sort(key=lambda x: x.get_attribute_value('Value'))
+    constant_values.sort(key = lambda x: x.get_attribute_value('Value'))
     array_data_type = f"{unique_data_types[0]}Array"
     attributes = [
-        XmlAttributeAsDict(Name='DataType',Value=array_data_type)
+        XmlAttributeAsDict(Name = 'DataType', Value = array_data_type)
     ]
-    return XmlNodeAsDict(NodeName='ConstantValueList',Attributes=attributes,ChildNodes=constant_values)
+    return XmlNodeAsDict(NodeName = 'ConstantValueList', Attributes = attributes, ChildNodes = constant_values)
 
-def new_file_setting(path:str,filter:str,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='File'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+def new_file_setting(
+        path: str, filter: str, Is64Bit: bool = True, 
+        logical_name = McmIdentifier()\
+            .get_logical_name(object_type_name = 'File'), 
+        external_reference_id: int = None, 
+        group_ids: list[int] = None
+        ) -> XmlNodeAsDict:
     """Create a new file based detection setting"""
     child_nodes = [
-        new_annotation(include_xmlns=True),
-        XmlNodeAsDict(NodeName='Path',NodeInnerText=path),
-        XmlNodeAsDict(NodeName='Filter',NodeInnerText=filter)
+        new_annotation(include_xmlns = True), 
+        XmlNodeAsDict(NodeName = 'Path', NodeInnerText = path), 
+        XmlNodeAsDict(NodeName = 'Filter', NodeInnerText = filter)
     ]
     attributes = [
-        XmlAttributeAsDict(Name='Is64Bit',Value=f"{Is64Bit.__str__().lower()}"),
-        XmlAttributeAsDict(Name='LogicalName',Value=logical_name),
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap(namespace_name='DesiredConfiguration')['ns'])
+        XmlAttributeAsDict(
+            Name = 'Is64Bit', 
+            Value = f"{Is64Bit.__str__().lower()}"
+            ), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = logical_name), 
+        XmlAttributeAsDict(
+            Name = 'xmlns', 
+            Value = get_nsmap(namespace_name = 'DesiredConfiguration')['ns']
+        )
     ]
-    file_setting = XmlNodeAsDict(NodeName='File',Attributes=attributes,ChildNodes=child_nodes,external_reference_id=external_reference_id,group_ids=group_ids)
+    file_setting = XmlNodeAsDict(
+        NodeName = 'File', Attributes = attributes, 
+        ChildNodes = child_nodes, 
+        external_reference_id = external_reference_id, 
+        group_ids = group_ids
+        )
     return file_setting
 
-def get_file_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+def get_file_setting_reference_nodes(
+        setting: XmlNodeAsDict, authoring_scope_id : str, 
+        application_id: str, setting_options: dict, version: int = 1
+        ) -> list[XmlNodeAsDict]:
     """Create a reference XmlNodeAsDict object from the supplied
     file setting XmlNodeAsDict and authoring scope string
     """
     nodes = []
     attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=application_id),
-        XmlAttributeAsDict(Name='Version',Value=version),
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = application_id), 
+        XmlAttributeAsDict(Name = 'Version', Value = version), 
     ]
     if setting_options.get('Property') is None:
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value='Int64'))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Count')
-    elif PropertyPathDataType.__contains__(setting_options.get('Property','')) == False:
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = 'Int64'))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Count')
+    elif PropertyPathDataType.__contains__(setting_options.get('Property', '')) == False:
         print(f"Property must be null or one of the following: {', '.join(list(PropertyPathDataType.keys()))}`t Actual value: {setting_options.get('Property')}")
         raise ValueError('Invalid Property value.')
     else:
         data_type = PropertyPathDataType.get(setting_options.get('Property'))
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value=data_type))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Value')
-    attributes.append(XmlAttributeAsDict(Name='SettingLogicalName',Value=setting.get_attribute_value('LogicalName')))
-    attributes.append(XmlAttributeAsDict(Name='SettingSourceType',Value='File'))
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = data_type))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Value')
+    attributes.append(XmlAttributeAsDict(Name = 'SettingLogicalName', Value = setting.get_attribute_value('LogicalName')))
+    attributes.append(XmlAttributeAsDict(Name = 'SettingSourceType', Value = 'File'))
     attributes.append(method_attribute)
-    if method_attribute.get('Value','') == 'Value':
-        attributes.append(XmlAttributeAsDict(Name='PropertyPath',Value=setting_options['Property']))
-    attributes.append(XmlAttributeAsDict(Name='Changeable',Value='false'))
-    setting_reference = XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes)
+    if method_attribute.get('Value', '') == 'Value':
+        attributes.append(XmlAttributeAsDict(Name = 'PropertyPath', Value = setting_options['Property']))
+    attributes.append(XmlAttributeAsDict(Name = 'Changeable', Value = 'false'))
+    setting_reference = XmlNodeAsDict(NodeName = 'SettingReference', Attributes = attributes)
     nodes.append(setting_reference)
-    if ['Between','OneOf','NoneOf'].__contains__(setting_options.get('Operator')):
+    if ['Between', 'OneOf', 'NoneOf'].__contains__(setting_options.get('Operator')):
         comparisons = []
-        for c in setting_options.get('Value',[]):
-            item = new_constant_value(value=c,data_type=setting_options.get('DataType',setting_options.get('Property')))
+        for c in setting_options.get('Value', []):
+            item = new_constant_value(value = c, data_type = setting_options.get('DataType', setting_options.get('Property')))
             comparisons.append(item)
-        comparison = new_constant_value_list(constant_values=comparisons)
+        comparison = new_constant_value_list(constant_values = comparisons)
     elif method_attribute.get('Value') == 'Count':
-        comparison = new_constant_value(value='0',data_type='Int64')
+        comparison = new_constant_value(value = '0', data_type = 'Int64')
     else:
-        comparison = new_constant_value(value=setting_options['Value'],data_type=setting_reference.get_attribute_value('DataType'))
+        comparison = new_constant_value(value = setting_options['Value'], data_type = setting_reference.get_attribute_value('DataType'))
     nodes.append(comparison)
     return nodes
 
-def new_folder_setting(path,filter,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='Folder'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+def new_folder_setting(
+        path, filter, Is64Bit = True, 
+        logical_name = McmIdentifier()\
+            .get_logical_name(object_type_name = 'Folder'), 
+        external_reference_id: int = None, 
+        group_ids: list[int] = None
+        ) -> XmlNodeAsDict:
     """Create a new folder based detection setting"""
     child_nodes = [
-        new_annotation(include_xmlns=True),
-        XmlNodeAsDict(NodeName='Path',NodeInnerText=path),
-        XmlNodeAsDict(NodeName='Filter',NodeInnerText=filter)
+        new_annotation(include_xmlns = True), 
+        XmlNodeAsDict(NodeName = 'Path', NodeInnerText = path), 
+        XmlNodeAsDict(NodeName = 'Filter', NodeInnerText = filter)
     ]
     attributes = [
-        XmlAttributeAsDict(Name='Is64Bit',Value=f"{Is64Bit.__str__().lower()}"),
-        XmlAttributeAsDict(Name='LogicalName',Value=logical_name),
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap(namespace_name='DesiredConfiguration')['ns'])
+        XmlAttributeAsDict(Name = 'Is64Bit', Value = f"{Is64Bit.__str__().lower()}"), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = logical_name), 
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap(namespace_name = 'DesiredConfiguration')['ns'])
     ]
-    folder_setting = XmlNodeAsDict(NodeName='Folder',ChildNodes=child_nodes,Attributes=attributes,external_reference_id=external_reference_id,group_ids=group_ids)
+    folder_setting = XmlNodeAsDict(NodeName = 'Folder', ChildNodes = child_nodes, Attributes = attributes, external_reference_id = external_reference_id, group_ids = group_ids)
     return folder_setting
 
-def get_folder_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+def get_folder_setting_reference_nodes(setting: XmlNodeAsDict, authoring_scope_id: str, application_id: str, setting_options:dict, version:int = 1) -> list[XmlNodeAsDict]:
     """Create a reference XmlNodeAsDict object from the supplied
     folder setting XmlNodeAsDict and authoring scope string
     """
     nodes = []
     attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=application_id),
-        XmlAttributeAsDict(Name='Version',Value=version),
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = application_id), 
+        XmlAttributeAsDict(Name = 'Version', Value = version), 
     ]
     if setting_options.get('Property') is not None:
         data_type = PropertyPathDataType.get(setting_options.get('Property'))
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value=data_type))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Value')
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = data_type))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Value')
     else:
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value='Int64'))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Count')
-    attributes.append(XmlAttributeAsDict(Name='SettingLogicalName',Value=setting.get_attribute_value('LogicalName')))
-    attributes.append(XmlAttributeAsDict(Name='SettingSourceType',Value='Folder'))
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = 'Int64'))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Count')
+    attributes.append(XmlAttributeAsDict(Name = 'SettingLogicalName', Value = setting.get_attribute_value('LogicalName')))
+    attributes.append(XmlAttributeAsDict(Name = 'SettingSourceType', Value = 'Folder'))
     attributes.append(method_attribute)
-    if method_attribute.get('Value','') == 'Value':
-        attributes.append(XmlAttributeAsDict(Name='PropertyPath',Value=setting_options['Property']))
-    attributes.append(XmlAttributeAsDict(Name='Changeable',Value='false'))
-    nodes.append(XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes))
-    if ['Between','OneOf','NoneOf'].__contains__(setting_options.get('Operator')):
+    if method_attribute.get('Value', '') == 'Value':
+        attributes.append(XmlAttributeAsDict(Name = 'PropertyPath', Value = setting_options['Property']))
+    attributes.append(XmlAttributeAsDict(Name = 'Changeable', Value = 'false'))
+    nodes.append(XmlNodeAsDict(NodeName = 'SettingReference', Attributes = attributes))
+    if ['Between', 'OneOf', 'NoneOf'].__contains__(setting_options.get('Operator')):
         comparisons = []
-        for c in setting_options.get('Value',[]):
-            comparisons.append(new_constant_value(value=c,data_type=PropertyPathDataType.get(setting_options.get('Property'))))
-        comparison = new_constant_value_list(constant_values=comparisons)
+        for c in setting_options.get('Value', []):
+            comparisons.append(new_constant_value(value = c, data_type = PropertyPathDataType.get(setting_options.get('Property'))))
+        comparison = new_constant_value_list(constant_values = comparisons)
     elif method_attribute.get('Value') == 'Count':
-        comparison = new_constant_value(value='0',data_type='Int64')
+        comparison = new_constant_value(value = '0', data_type = 'Int64')
     else:
-        comparison = new_constant_value(value=setting_options['Value'],data_type=data_type)
+        comparison = new_constant_value(value = setting_options['Value'], data_type = data_type)
     nodes.append(comparison)
     return nodes
 
-def new_msi_setting(product_code,IsPerUser=False,logical_name=McmIdentifier().get_logical_name(object_type_name='MSI'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+def new_msi_setting(product_code, IsPerUser = False, logical_name = McmIdentifier().get_logical_name(object_type_name = 'MSI'), external_reference_id:int = None, group_ids: list[int] = None) -> XmlNodeAsDict:
     """Create a new msi detection setting"""
     child_nodes = [
-        new_annotation(include_xmlns=True),
-        XmlNodeAsDict(NodeName='ProductCode',NodeInnerText=product_code)
+        new_annotation(include_xmlns = True), 
+        XmlNodeAsDict(NodeName = 'ProductCode', NodeInnerText = product_code)
     ]
     attributes = [
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap(namespace_name='DesiredConfiguration')['ns']),
-        XmlAttributeAsDict(Name='IsPerUser',Value=f"{IsPerUser.__str__().lower()}"),
-        XmlAttributeAsDict(Name='LogicalName',Value=logical_name)
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap(namespace_name = 'DesiredConfiguration')['ns']), 
+        XmlAttributeAsDict(Name = 'IsPerUser', Value = f"{IsPerUser.__str__().lower()}"), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = logical_name)
     ]
-    msi_setting = XmlNodeAsDict(NodeName='MSI',ChildNodes=child_nodes,Attributes=attributes,external_reference_id=external_reference_id,group_ids=group_ids)
+    msi_setting = XmlNodeAsDict(NodeName = 'MSI', ChildNodes = child_nodes, Attributes = attributes, external_reference_id = external_reference_id, group_ids = group_ids)
     return msi_setting
 
-def get_msi_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+def get_msi_setting_reference_nodes(setting: XmlNodeAsDict, authoring_scope_id: str, application_id: str, setting_options:dict, version:int = 1) -> list[XmlNodeAsDict]:
     """Create a reference XmlNodeAsDict object from the supplied
     msi setting XmlNodeAsDict and authoring scope string
     """
     nodes = []
     attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=application_id),
-        XmlAttributeAsDict(Name='Version',Value=version),
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = application_id), 
+        XmlAttributeAsDict(Name = 'Version', Value = version), 
     ]
     if setting_options.get('Operator') is not None:
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value='Version'))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Value')
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = 'Version'))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Value')
     else:
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value='Int64'))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Count')
-    attributes.append(XmlAttributeAsDict(Name='SettingLogicalName',Value=setting.get_attribute_value('LogicalName')))
-    attributes.append(XmlAttributeAsDict(Name='SettingSourceType',Value='MSI'))
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = 'Int64'))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Count')
+    attributes.append(XmlAttributeAsDict(Name = 'SettingLogicalName', Value = setting.get_attribute_value('LogicalName')))
+    attributes.append(XmlAttributeAsDict(Name = 'SettingSourceType', Value = 'MSI'))
     attributes.append(method_attribute)
     if method_attribute.get('Value') == 'Value':
         property_path = 'ProductVersion'
-        attributes.append(XmlAttributeAsDict(Name="PropertyPath",Value=property_path))
-    attributes.append(XmlAttributeAsDict(Name='Changeable',Value='false'))
-    nodes.append(XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes))
+        attributes.append(XmlAttributeAsDict(Name = "PropertyPath", Value = property_path))
+    attributes.append(XmlAttributeAsDict(Name = 'Changeable', Value = 'false'))
+    nodes.append(XmlNodeAsDict(NodeName = 'SettingReference', Attributes = attributes))
     if method_attribute.get('Value') == 'Count':
-        comparison = new_constant_value(value='0',data_type='Int64')
+        comparison = new_constant_value(value = '0', data_type = 'Int64')
     else:
-        comparison = new_constant_value(value=setting_options['Value'],data_type='Version')
+        comparison = new_constant_value(value = setting_options['Value'], data_type = 'Version')
     nodes.append(comparison)
     return nodes
 
-def new_registrykey_setting(hive:str,key,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='RegKey'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+def new_registrykey_setting(hive: str, key, Is64Bit = True, logical_name = McmIdentifier().get_logical_name(object_type_name = 'RegKey'), external_reference_id:int = None, group_ids: list[int] = None) -> XmlNodeAsDict:
     """Create a new registry key based detection setting"""
     child_nodes = [
-        new_annotation(include_xmlns=True),
-        XmlNodeAsDict(NodeName='Key',NodeInnerText=key)
+        new_annotation(include_xmlns = True), 
+        XmlNodeAsDict(NodeName = 'Key', NodeInnerText = key)
     ]
     attributes = [
-        XmlAttributeAsDict(Name='Hive',Value=hive),
-        XmlAttributeAsDict(Name='Is64Bit',Value=f"{Is64Bit.__str__().lower()}"),
-        XmlAttributeAsDict(Name='LogicalName',Value=logical_name),
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap(namespace_name='DesiredConfiguration')['ns'])
+        XmlAttributeAsDict(Name = 'Hive', Value = hive), 
+        XmlAttributeAsDict(Name = 'Is64Bit', Value = f"{Is64Bit.__str__().lower()}"), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = logical_name), 
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap(namespace_name = 'DesiredConfiguration')['ns'])
     ]
-    regkey_setting = XmlNodeAsDict(NodeName='RegistryKey',ChildNodes=child_nodes,Attributes=attributes,external_reference_id=external_reference_id,group_ids=group_ids)
+    regkey_setting = XmlNodeAsDict(NodeName = 'RegistryKey', ChildNodes = child_nodes, Attributes = attributes, external_reference_id = external_reference_id, group_ids = group_ids)
     return regkey_setting
 
-def get_registrykey_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict=None,version:int=1) -> list[XmlNodeAsDict]:
+def get_registrykey_setting_reference_nodes(setting: XmlNodeAsDict, authoring_scope_id: str, application_id: str, setting_options:dict = None, version:int = 1) -> list[XmlNodeAsDict]:
     """Create a reference XmlNodeAsDict object from the supplied
     registry key setting XmlNodeAsDict and authoring scope string
     """
     nodes = []
     attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=application_id),
-        XmlAttributeAsDict(Name='Version',Value=version),
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = application_id), 
+        XmlAttributeAsDict(Name = 'Version', Value = version), 
     ]
-    attributes.append(XmlAttributeAsDict(Name='DataType',Value='Boolean'))
-    method_attribute = XmlAttributeAsDict(Name='Method',Value='Value')
-    attributes.append(XmlAttributeAsDict(Name='SettingLogicalName',Value=setting.get_attribute_value('LogicalName')))
-    attributes.append(XmlAttributeAsDict(Name='SettingSourceType',Value='RegistryKey'))
+    attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = 'Boolean'))
+    method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Value')
+    attributes.append(XmlAttributeAsDict(Name = 'SettingLogicalName', Value = setting.get_attribute_value('LogicalName')))
+    attributes.append(XmlAttributeAsDict(Name = 'SettingSourceType', Value = 'RegistryKey'))
     attributes.append(method_attribute)
-    attributes.append(XmlAttributeAsDict(Name='PropertyPath',Value='RegistryKeyExists'))
-    attributes.append(XmlAttributeAsDict(Name='Changeable',Value='false'))
-    nodes.append(XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes))
-    comparison = new_constant_value(value='true',data_type='Boolean')
+    attributes.append(XmlAttributeAsDict(Name = 'PropertyPath', Value = 'RegistryKeyExists'))
+    attributes.append(XmlAttributeAsDict(Name = 'Changeable', Value = 'false'))
+    nodes.append(XmlNodeAsDict(NodeName = 'SettingReference', Attributes = attributes))
+    comparison = new_constant_value(value = 'true', data_type = 'Boolean')
     nodes.append(comparison)
     return nodes
 
-def new_registryvalue_setting(hive,key,value_name,data_type:str,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='RegSetting'),
-        create_missing_path:bool=True,depth:str="Base",external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+def new_registryvalue_setting(hive, key, value_name, data_type: str, Is64Bit = True, logical_name = McmIdentifier().get_logical_name(object_type_name = 'RegSetting'), 
+        create_missing_path:bool = True, depth: str = "Base", external_reference_id:int = None, group_ids: list[int] = None) -> XmlNodeAsDict:
     """Create a new registry value detection setting"""    
     registry_discovery_node_attributes = [
-        XmlAttributeAsDict(Name='Hive',Value=hive),
-        XmlAttributeAsDict(Name='Depth',Value=depth),
-        XmlAttributeAsDict(Name='Is64Bit',Value=f"{Is64Bit.__str__().lower()}"),
-        XmlAttributeAsDict(Name='CreateMissingPath',Value=f"{create_missing_path.__str__().lower()}")
+        XmlAttributeAsDict(Name = 'Hive', Value = hive), 
+        XmlAttributeAsDict(Name = 'Depth', Value = depth), 
+        XmlAttributeAsDict(Name = 'Is64Bit', Value = f"{Is64Bit.__str__().lower()}"), 
+        XmlAttributeAsDict(Name = 'CreateMissingPath', Value = f"{create_missing_path.__str__().lower()}")
     ]
     registry_discovery_node_children = [
-        XmlNodeAsDict(NodeName='Key',NodeInnerText=key),
-        XmlNodeAsDict(NodeName='ValueName',NodeInnerText=value_name)
+        XmlNodeAsDict(NodeName = 'Key', NodeInnerText = key), 
+        XmlNodeAsDict(NodeName = 'ValueName', NodeInnerText = value_name)
     ]
     child_nodes = [
-        new_annotation(include_xmlns=True),
-        XmlNodeAsDict(NodeName='RegistryDiscoverySource',Attributes=registry_discovery_node_attributes,ChildNodes=registry_discovery_node_children)
+        new_annotation(include_xmlns = True), 
+        XmlNodeAsDict(NodeName = 'RegistryDiscoverySource', Attributes = registry_discovery_node_attributes, ChildNodes = registry_discovery_node_children)
     ]
     attributes = [
-        XmlAttributeAsDict(Name='LogicalName',Value=logical_name),
-        XmlAttributeAsDict(Name='DataType',Value=data_type),
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap(namespace_name='DesiredConfiguration')['ns'])
+        XmlAttributeAsDict(Name = 'LogicalName', Value = logical_name), 
+        XmlAttributeAsDict(Name = 'DataType', Value = data_type), 
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap(namespace_name = 'DesiredConfiguration')['ns'])
     ]
-    regvalue_setting = XmlNodeAsDict(NodeName='SimpleSetting',ChildNodes=child_nodes,Attributes=attributes,external_reference_id=external_reference_id,group_ids=group_ids)
+    regvalue_setting = XmlNodeAsDict(NodeName = 'SimpleSetting', ChildNodes = child_nodes, Attributes = attributes, external_reference_id = external_reference_id, group_ids = group_ids)
     return regvalue_setting
 
-def get_registryvalue_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+def get_registryvalue_setting_reference_nodes(setting: XmlNodeAsDict, authoring_scope_id: str, application_id: str, setting_options:dict, version:int = 1) -> list[XmlNodeAsDict]:
     """Create a reference XmlNodeAsDict object from the supplied
     registry value setting XmlNodeAsDict and authoring scope string
     """
     nodes = []
     attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=application_id),
-        XmlAttributeAsDict(Name='Version',Value=version),
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = application_id), 
+        XmlAttributeAsDict(Name = 'Version', Value = version), 
     ]
     if setting_options.get('DataType') is not None:
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value=setting_options['DataType']))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Value')
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = setting_options['DataType']))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Value')
     else:
-        attributes.append(XmlAttributeAsDict(Name='DataType',Value='Int64'))
-        method_attribute = XmlAttributeAsDict(Name='Method',Value='Count')
-    attributes.append(XmlAttributeAsDict(Name='SettingLogicalName',Value=setting.get_attribute_value('LogicalName')))
-    attributes.append(XmlAttributeAsDict(Name='SettingSourceType',Value='Registry'))
+        attributes.append(XmlAttributeAsDict(Name = 'DataType', Value = 'Int64'))
+        method_attribute = XmlAttributeAsDict(Name = 'Method', Value = 'Count')
+    attributes.append(XmlAttributeAsDict(Name = 'SettingLogicalName', Value = setting.get_attribute_value('LogicalName')))
+    attributes.append(XmlAttributeAsDict(Name = 'SettingSourceType', Value = 'Registry'))
     attributes.append(method_attribute)
-    attributes.append(XmlAttributeAsDict(Name='Changeable',Value='false'))
-    nodes.append(XmlNodeAsDict(NodeName='SettingReference',Attributes=attributes))
-    if ['Between','OneOf','NoneOf'].__contains__(setting_options.get('Operator')):
+    attributes.append(XmlAttributeAsDict(Name = 'Changeable', Value = 'false'))
+    nodes.append(XmlNodeAsDict(NodeName = 'SettingReference', Attributes = attributes))
+    if ['Between', 'OneOf', 'NoneOf'].__contains__(setting_options.get('Operator')):
         comparisons = []
-        for c in setting_options.get('Value',[]):
-            item = new_constant_value(value=c,data_type=setting_options['DataType'])
+        for c in setting_options.get('Value', []):
+            item = new_constant_value(value = c, data_type = setting_options['DataType'])
             comparisons.append(item)
-        comparison = new_constant_value_list(constant_values=comparisons)
+        comparison = new_constant_value_list(constant_values = comparisons)
     elif method_attribute.get('Value') == 'Count':
-        comparison = new_constant_value(value='0',data_type='Int64')
+        comparison = new_constant_value(value = '0', data_type = 'Int64')
     else:
-        comparison = new_constant_value(value=setting_options['ValueData'],data_type=setting_options['DataType'])
+        comparison = new_constant_value(value = setting_options['ValueData'], data_type = setting_options['DataType'])
     nodes.append(comparison)
     return nodes
 
 get_setting_reference = {
-    'File': get_file_setting_reference_nodes,
-    'Folder': get_folder_setting_reference_nodes,
-    'RegistryKey': get_registrykey_setting_reference_nodes,
-    'RegistryKeyValue': get_registryvalue_setting_reference_nodes,
-    'MSI': get_msi_setting_reference_nodes,
+    'File': get_file_setting_reference_nodes, 
+    'Folder': get_folder_setting_reference_nodes, 
+    'RegistryKey': get_registrykey_setting_reference_nodes, 
+    'RegistryKeyValue': get_registryvalue_setting_reference_nodes, 
+    'MSI': get_msi_setting_reference_nodes, 
     'SimpleSetting': get_registryvalue_setting_reference_nodes
 }
 
-def new_detection_rule_expression(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_item:dict,is_root:bool=False) -> XmlNodeAsDict:
+def new_detection_rule_expression(authoring_scope_id: str, application_id: str, deployment_type_id: str, detection_item:dict, is_root:bool = False) -> XmlNodeAsDict:
     """Create a new detection rule expression"""
     attributes = []
     if detection_item['Type'] == 'Group' and is_root == False:
         attributes.append(
-            XmlAttributeAsDict(Name='IsGroup',Value='true')
+            XmlAttributeAsDict(Name = 'IsGroup', Value = 'true')
         )
-    detection_options = detection_item.get('Options',{})
-    if (detection_options.get('Operator','') != ''):
-        item_operator = detection_options.get('Operator','')
-    elif detection_item.get('Type','') == 'RegistryKey':
+    detection_options = detection_item.get('Options', {})
+    if (detection_options.get('Operator', '') !=  ''):
+        item_operator = detection_options.get('Operator', '')
+    elif detection_item.get('Type', '') == 'RegistryKey':
         item_operator = 'Equals'
     else:
-        raise ValueError(f"Invalid detection rule configuration.::{detection_options.get('Operator','')}/{item_operator}\ttype:{detection_options.get('Type')}")
+        raise ValueError(f"Invalid detection rule configuration.::{detection_options.get('Operator', '')}/{item_operator}\ttype:{detection_options.get('Type')}")
     operands_child_nodes = []
     if detection_item['Type'] == 'Group':
         for item in detection_item['Options']['Items']:
-            operands_child_nodes.append(new_detection_rule_expression(detection_item=item,authoring_scope_id=authoring_scope_id,application_id=application_id,deployment_type_id=deployment_type_id))
+            operands_child_nodes.append(new_detection_rule_expression(detection_item = item, authoring_scope_id = authoring_scope_id, application_id = application_id, deployment_type_id = deployment_type_id))
     else:
         options_id = id(detection_item['Options'])
         setting = XmlNodeAsDict.instance_map_by_external_id.get(f"{options_id}")
         reference_getter = get_setting_reference[setting.get('NodeName')]
         if reference_getter:
-            setting_reference_nodes = reference_getter(setting=setting,authoring_scope_id=authoring_scope_id,application_id=application_id,
-                    setting_options=detection_options)
+            setting_reference_nodes = reference_getter(setting = setting, authoring_scope_id = authoring_scope_id, application_id = application_id, 
+                    setting_options = detection_options)
             operands_child_nodes.extend(setting_reference_nodes)
         else:
             raise ValueError("Unknown Type.")
-    detection_rule_expression = XmlNodeAsDict(NodeName='Expression',Attributes=attributes,
-            ChildNodes=[new_operator(item_operator),XmlNodeAsDict(NodeName='Operands',ChildNodes=operands_child_nodes)],
-            external_reference_id=id(detection_options))
+    detection_rule_expression = XmlNodeAsDict(NodeName = 'Expression', Attributes = attributes, 
+            ChildNodes = [new_operator(item_operator), XmlNodeAsDict(NodeName = 'Operands', ChildNodes = operands_child_nodes)], 
+            external_reference_id = id(detection_options))
     return detection_rule_expression
 
-def new_setting(detection_type:str,options:dict) -> XmlNodeAsDict:
+def new_setting(detection_type: str, options:dict) -> XmlNodeAsDict:
     """Create a new detection setting"""
     try:
         setting_detection_type = DetectionType(detection_type)
     except:
         valid = ', '.join(f.value for f in DetectionType)
         raise ProcessorError(f"Invalid detection type: '{detection_type}'. Valid: {valid}")
-    if ['CustomScript','Group'].__contains__(setting_detection_type.name):
+    if ['CustomScript', 'Group'].__contains__(setting_detection_type.name):
         raise ProcessorError('Must provide a valid detection type to use new_setting.')
     if setting_detection_type.name == 'File':
-        return new_file_setting(path=options['Path'],filter=options['Filter'],Is64Bit=options.get('Is64Bit',True),external_reference_id=id(options))
+        return new_file_setting(path = options['Path'], filter = options['Filter'], Is64Bit = options.get('Is64Bit', True), external_reference_id = id(options))
     elif setting_detection_type.name == 'Folder':
-        return new_folder_setting(path=options['Path'],filter=options['Filter'],Is64Bit=options.get('Is64Bit',True),external_reference_id=id(options))
+        return new_folder_setting(path = options['Path'], filter = options['Filter'], Is64Bit = options.get('Is64Bit', True), external_reference_id = id(options))
     elif setting_detection_type.name == 'RegistryKey':
-        return new_registrykey_setting(hive=options['Hive'],key=options['Key'],Is64Bit=options.get('Is64Bit',True),external_reference_id=id(options))
+        return new_registrykey_setting(hive = options['Hive'], key = options['Key'], Is64Bit = options.get('Is64Bit', True), external_reference_id = id(options))
     elif setting_detection_type.name == 'RegistryKeyValue':
-        return new_registryvalue_setting(hive=options['Hive'],key=options['Key'],value_name=options['ValueName'],data_type=options['DataType'],Is64Bit=options.get('Is64Bit',True),external_reference_id=id(options))
+        return new_registryvalue_setting(hive = options['Hive'], key = options['Key'], value_name = options['ValueName'], data_type = options['DataType'], Is64Bit = options.get('Is64Bit', True), external_reference_id = id(options))
     elif setting_detection_type.name == 'MSI':
-        return new_msi_setting(product_code=options['ProductCode'],IsPerUser=options.get('IsPerUser',False),external_reference_id=id(options))
+        return new_msi_setting(product_code = options['ProductCode'], IsPerUser = options.get('IsPerUser', False), external_reference_id = id(options))
 
 def get_nested_settings(detection_config:dict) -> list[XmlNodeAsDict]:
     """Create detection settings objects for 'end' setting entities
@@ -1029,141 +1098,141 @@ def get_nested_settings(detection_config:dict) -> list[XmlNodeAsDict]:
     results = []
     if detection_config['Type'] == 'Group':
         for item in detection_config['Options']['Items']:
-            results.extend(get_nested_settings(detection_config=item))
+            results.extend(get_nested_settings(detection_config = item))
     else:
-        results.append(new_setting(detection_type=detection_config['Type'],options=detection_config['Options']))
+        results.append(new_setting(detection_type = detection_config['Type'], options = detection_config['Options']))
     return results
 
-def new_detection_rule_node(authoring_scope_id:str,application_id,deployment_type_id:str,detection:dict,severity:str="None",noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+def new_detection_rule_node(authoring_scope_id: str, application_id, deployment_type_id: str, detection:dict, severity: str = "None", noncompliance_on_nonexistance:bool = False) -> XmlNodeAsDict:
     """Create a new detection rule XmlNodeAsDict node"""
-    expression = new_detection_rule_expression(authoring_scope_id=authoring_scope_id,
-                    application_id=application_id,deployment_type_id=deployment_type_id,detection_item=detection,is_root=True)
+    expression = new_detection_rule_expression(authoring_scope_id = authoring_scope_id, 
+                    application_id = application_id, deployment_type_id = deployment_type_id, detection_item = detection, is_root = True)
     dt_model_name = f"{authoring_scope_id}/{deployment_type_id}"
     child_nodes = [
-            new_annotation(),
+            new_annotation(), 
             expression
     ]
     attributes = [
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap(namespace_name='Rule')['ns']),
-        XmlAttributeAsDict(Name='id',Value=dt_model_name),
-        XmlAttributeAsDict(Name='Severity',Value=severity),
-        XmlAttributeAsDict(Name='NonCompliantWhenSettingIsNotFound',Value=noncompliance_on_nonexistance.__str__().lower())
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap(namespace_name = 'Rule')['ns']), 
+        XmlAttributeAsDict(Name = 'id', Value = dt_model_name), 
+        XmlAttributeAsDict(Name = 'Severity', Value = severity), 
+        XmlAttributeAsDict(Name = 'NonCompliantWhenSettingIsNotFound', Value = noncompliance_on_nonexistance.__str__().lower())
     ]
-    rule_node = XmlNodeAsDict(NodeName='Rule',Attributes=attributes,ChildNodes=child_nodes,external_reference_id=id(detection))
+    rule_node = XmlNodeAsDict(NodeName = 'Rule', Attributes = attributes, ChildNodes = child_nodes, external_reference_id = id(detection))
     return rule_node
 
-def new_enhanced_detection_method_node(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_config:dict,severity:str='Informational',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+def new_enhanced_detection_method_node(authoring_scope_id: str, application_id: str, deployment_type_id: str, detection_config:dict, severity: str = 'Informational', noncompliance_on_nonexistance:bool = False) -> XmlNodeAsDict:
     """Create a new enhanced detection XmlNodeAsAttribute object"""
-    setting_nodes = get_nested_settings(detection_config=detection_config)
-    settings_node = XmlNodeAsDict(NodeName='Settings',ChildNodes=setting_nodes,Attributes=[XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('AppMgmtDigest')['ns'])])
-    rule_node = new_detection_rule_node(authoring_scope_id=authoring_scope_id,application_id=application_id,deployment_type_id=deployment_type_id,
-            detection=detection_config,severity=severity,noncompliance_on_nonexistance=noncompliance_on_nonexistance)
-    enhanced_detection_method = XmlNodeAsDict(NodeName='EnhancedDetectionMethod',Attributes=[XmlAttributeAsDict(Name="xmlns",Value=get_nsmap('AppMgmtDigest')['ns'])],xml_declaration=True)
+    setting_nodes = get_nested_settings(detection_config = detection_config)
+    settings_node = XmlNodeAsDict(NodeName = 'Settings', ChildNodes = setting_nodes, Attributes = [XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap('AppMgmtDigest')['ns'])])
+    rule_node = new_detection_rule_node(authoring_scope_id = authoring_scope_id, application_id = application_id, deployment_type_id = deployment_type_id, 
+            detection = detection_config, severity = severity, noncompliance_on_nonexistance = noncompliance_on_nonexistance)
+    enhanced_detection_method = XmlNodeAsDict(NodeName = 'EnhancedDetectionMethod', Attributes = [XmlAttributeAsDict(Name = "xmlns", Value = get_nsmap('AppMgmtDigest')['ns'])], xml_declaration = True)
     enhanced_detection_method.append_child_node([settings_node])
     enhanced_detection_method.append_child_node([rule_node])
     return enhanced_detection_method
 
-def new_requirements_rule(rule:dict,rule_id:str,severity='None',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+def new_requirements_rule(rule:dict, rule_id: str, severity = 'None', noncompliance_on_nonexistance:bool = False) -> XmlNodeAsDict:
     """Create a new requirements rule"""
     raise Exception("Not supported yet.")
     pass
 
-def new_requirements_rule_from_string(rule:str,rule_id:str,severity='None',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+def new_requirements_rule_from_string(rule: str, rule_id: str, severity = 'None', noncompliance_on_nonexistance:bool = False) -> XmlNodeAsDict:
     """Convert a raw XML string to a requirements rule XmlNodeAsDict
     object
     """
     attributes = [
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('Rule')['ns']),
-        XmlAttributeAsDict(Name='id',Value=rule_id),
-        XmlAttributeAsDict(Name='Severity',Value=f"{severity}"),
-        XmlAttributeAsDict(Name='NonCompliantWhenSettingIsNotFound',Value=f"{noncompliance_on_nonexistance.__str__().lower()}")
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap('Rule')['ns']), 
+        XmlAttributeAsDict(Name = 'id', Value = rule_id), 
+        XmlAttributeAsDict(Name = 'Severity', Value = f"{severity}"), 
+        XmlAttributeAsDict(Name = 'NonCompliantWhenSettingIsNotFound', Value = f"{noncompliance_on_nonexistance.__str__().lower()}")
     ]
-    requirements_rule = XmlNodeAsDict(NodeName='Rule',Attributes=attributes)
-    instance = XmlNodeAsDict.from_xml_string_with_tracking(xml_string=rule)
+    requirements_rule = XmlNodeAsDict(NodeName = 'Rule', Attributes = attributes)
+    instance = XmlNodeAsDict.from_xml_string_with_tracking(xml_string = rule)
     requirements_rule['ChildNodes'] = instance['ChildNodes']
     return requirements_rule
 
 get_requirements_rule_config = {
-    'XmlString': new_requirements_rule_from_string,
+    'XmlString': new_requirements_rule_from_string, 
     'Dict': new_requirements_rule
 }
 
-def new_dependency(authoring_scope_id:str,application_logical_name:str,dt_logical_name:str,auto_install:bool=False) -> XmlNodeAsDict:
+def new_dependency(authoring_scope_id: str, application_logical_name: str, dt_logical_name: str, auto_install:bool = False) -> XmlNodeAsDict:
     """Create a new dependency"""
     dt_appref_attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=application_logical_name)
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = application_logical_name)
     ]
-    dt_application_reference = XmlNodeAsDict(NodeName='DeploymentTypeApplicationReference',Attributes=dt_appref_attributes)
+    dt_application_reference = XmlNodeAsDict(NodeName = 'DeploymentTypeApplicationReference', Attributes = dt_appref_attributes)
 
     dtref_attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-        XmlAttributeAsDict(Name='LogicalName',Value=dt_logical_name),
-        XmlAttributeAsDict(Name='Changeable',Value=auto_install.__str__().lower())
-        # Changeable=true = autoinstall(yes)
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = dt_logical_name), 
+        XmlAttributeAsDict(Name = 'Changeable', Value = auto_install.__str__().lower())
+        # Changeable = true = autoinstall(yes)
     ]
-    dt_reference = XmlNodeAsDict(NodeName='DeploymentTypeReference',Attributes=dtref_attributes)
+    dt_reference = XmlNodeAsDict(NodeName = 'DeploymentTypeReference', Attributes = dtref_attributes)
     child_nodes = [
-        dt_application_reference,
+        dt_application_reference, 
         dt_reference
     ]
     expression_attributes = [
-        XmlAttributeAsDict(Name='DesiredState',Value='Required')
+        XmlAttributeAsDict(Name = 'DesiredState', Value = 'Required')
     ]
-    dependency = XmlNodeAsDict(NodeName='DeploymentTypeIntentExpression',Attributes=expression_attributes,ChildNodes=child_nodes)
+    dependency = XmlNodeAsDict(NodeName = 'DeploymentTypeIntentExpression', Attributes = expression_attributes, ChildNodes = child_nodes)
     return dependency
 
-def new_dependency_group(rule_name:str,dependencies:list[XmlNodeAsDict],id:str=None) -> XmlNodeAsDict:
+def new_dependency_group(rule_name: str, dependencies: list[XmlNodeAsDict], id: str = None) -> XmlNodeAsDict:
     """Create a new dependency group"""
     if id is None:
-        id = McmIdentifier().get_logical_name(object_type_name='DTRule')
+        id = McmIdentifier().get_logical_name(object_type_name = 'DTRule')
     attributes = [
-        XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('Rule')['ns']),
-        XmlAttributeAsDict(Name='id',Value=id),
-        XmlAttributeAsDict(Name='Severity',Value='Critical')
+        XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap('Rule')['ns']), 
+        XmlAttributeAsDict(Name = 'id', Value = id), 
+        XmlAttributeAsDict(Name = 'Severity', Value = 'Critical')
     ]
-    annotation = new_annotation(display_name=rule_name)
+    annotation = new_annotation(display_name = rule_name)
     dt_exp_child_nodes = [
-        new_operator('Or'),
-        XmlNodeAsDict(NodeName='Operands',ChildNodes=dependencies)
+        new_operator('Or'), 
+        XmlNodeAsDict(NodeName = 'Operands', ChildNodes = dependencies)
     ]
-    dt_expression = XmlNodeAsDict(NodeName='DeploymentTypeExpression',ChildNodes=dt_exp_child_nodes)
+    dt_expression = XmlNodeAsDict(NodeName = 'DeploymentTypeExpression', ChildNodes = dt_exp_child_nodes)
     child_nodes = [
-        annotation,
+        annotation, 
         dt_expression
     ]
-    return XmlNodeAsDict(NodeName='DeploymentTypeRule',Attributes=attributes,ChildNodes=child_nodes)
+    return XmlNodeAsDict(NodeName = 'DeploymentTypeRule', Attributes = attributes, ChildNodes = child_nodes)
 
-def new_dependencies_node(dependency_groups:list[XmlNodeAsDict]) -> XmlNodeAsDict:
+def new_dependencies_node(dependency_groups: list[XmlNodeAsDict]) -> XmlNodeAsDict:
     """Create a new dependencies XmlNodeAsDict object from the supplied
     dependency groups
     """
-    dependencies_node = XmlNodeAsDict(NodeName='Dependencies',ChildNodes=dependency_groups)
+    dependencies_node = XmlNodeAsDict(NodeName = 'Dependencies', ChildNodes = dependency_groups)
     return dependencies_node
 
-def new_requirements_node(requirements_rules:list[XmlNodeAsDict]) -> XmlNodeAsDict:
+def new_requirements_node(requirements_rules: list[XmlNodeAsDict]) -> XmlNodeAsDict:
     """Create a new requirements XmlNodeAsDict node"""
-    requirements_node = XmlNodeAsDict(NodeName='Requirements',ChildNodes=requirements_rules)
+    requirements_node = XmlNodeAsDict(NodeName = 'Requirements', ChildNodes = requirements_rules)
     return requirements_node
 
 #Installer
-def new_process_information(process_name:str,process_display_name:str) -> XmlNodeAsDict:
+def new_process_information(process_name: str, process_display_name: str) -> XmlNodeAsDict:
     """Create a new process detection object"""
     process_information = XmlNodeAsDict(
-        NodeName='ProcessInformation',Attributes=[
-            XmlAttributeAsDict(Name='Name',Value=process_name)
-        ],
-        ChildNodes=[
+        NodeName = 'ProcessInformation', Attributes = [
+            XmlAttributeAsDict(Name = 'Name', Value = process_name)
+        ], 
+        ChildNodes = [
             XmlNodeAsDict(
-                NodeName='DisplayInfo',Attributes=[
-                    XmlAttributeAsDict(Name='DefaultLanguage',Value='')
-                ],
-                ChildNodes=[
+                NodeName = 'DisplayInfo', Attributes = [
+                    XmlAttributeAsDict(Name = 'DefaultLanguage', Value = '')
+                ], 
+                ChildNodes = [
                     XmlNodeAsDict(
-                        NodeName='Info',
-                        Attributes=[
-                            XmlAttributeAsDict(Name='Language',Value=''),
-                            XmlAttributeAsDict(Name='DisplayName',Value=process_display_name)
+                        NodeName = 'Info', 
+                        Attributes = [
+                            XmlAttributeAsDict(Name = 'Language', Value = ''), 
+                            XmlAttributeAsDict(Name = 'DisplayName', Value = process_display_name)
                         ]
                     )
                 ]
@@ -1172,22 +1241,22 @@ def new_process_information(process_name:str,process_display_name:str) -> XmlNod
     )
     return process_information
 
-def new_install_process_detection(process_information:list[XmlNodeAsDict]) -> XmlNodeAsDict:
+def new_install_process_detection(process_information: list[XmlNodeAsDict]) -> XmlNodeAsDict:
     """Create an install process detection XmlNodeAsDict object from
     the list of process information objects
     """
     install_process_detection = XmlNodeAsDict(
-        NodeName='InstallProcessDetection',
-        ChildNodes=[
+        NodeName = 'InstallProcessDetection', 
+        ChildNodes = [
             XmlNodeAsDict(
-                NodeName='ProcessList',
-                ChildNodes=process_information
+                NodeName = 'ProcessList', 
+                ChildNodes = process_information
             )
         ]
     )
     return install_process_detection
 
-def new_arg(arg_name:str,arg_type:str,arg_value:any=None) -> XmlNodeAsDict:
+def new_arg(arg_name: str, arg_type: str, arg_value:any = None) -> XmlNodeAsDict:
     """Create an arg XmlNodeAsDict object"""
     try:
         cls_arg_type = ArgumentType[arg_type]
@@ -1195,10 +1264,10 @@ def new_arg(arg_name:str,arg_type:str,arg_value:any=None) -> XmlNodeAsDict:
         valid = ', '.join(f.value for f in ArgumentType)
         raise ValueError(f"Invalid operator: '{arg_type}'. Valid: {valid}")
     params = {
-        "NodeName": "Arg",
+        "NodeName": "Arg", 
         "Attributes": [
-            XmlAttributeAsDict(Name='Name',Value=arg_name),
-            XmlAttributeAsDict(Name='Type',Value=cls_arg_type.value)
+            XmlAttributeAsDict(Name = 'Name', Value = arg_name), 
+            XmlAttributeAsDict(Name = 'Type', Value = cls_arg_type.value)
         ]
     }
     if arg_value is None:
@@ -1207,17 +1276,17 @@ def new_arg(arg_name:str,arg_type:str,arg_value:any=None) -> XmlNodeAsDict:
         params['NodeInnerText'] = arg_value
     else:
         params["ChildNodes"] = []
-        if isinstance(arg_value,str):
-            params["ChildNodes"].append(XmlNodeAsDict(NodeName='Item',NodeInnerText=arg_value))
-        elif isinstance(arg_value,list):
+        if isinstance(arg_value, str):
+            params["ChildNodes"].append(XmlNodeAsDict(NodeName = 'Item', NodeInnerText = arg_value))
+        elif isinstance(arg_value, list):
             for i in arg_value:
-                params["ChildNodes"].append(XmlNodeAsDict(NodeName='Item',NodeInnerText=i.__str__()))
+                params["ChildNodes"].append(XmlNodeAsDict(NodeName = 'Item', NodeInnerText = i.__str__()))
         else:
             raise ValueError("Invalid value supplied for arg_value.")
     arg_node = XmlNodeAsDict(**params)
     return arg_node
 
-def new_dt_action(action_type:str,provider:str,args:list[XmlNodeAsDict],content_reference:XmlNodeAsDict=None) -> XmlNodeAsDict:
+def new_dt_action(action_type: str, provider: str, args: list[XmlNodeAsDict], content_reference: XmlNodeAsDict = None) -> XmlNodeAsDict:
     """Create a new deployment type action"""
     try:
         item_action_type = ActionType(action_type)
@@ -1231,17 +1300,17 @@ def new_dt_action(action_type:str,provider:str,args:list[XmlNodeAsDict],content_
         raise ValueError(f"Invalid action provider type: '{provider}'. Valid: {valid}")
     
     action = XmlNodeAsDict(
-        NodeName=item_action_type.name,
-        ChildNodes=[
-            XmlNodeAsDict(NodeName='Provider',NodeInnerText=item_provider.name),
-            XmlNodeAsDict(NodeName='Args',ChildNodes=args)
+        NodeName = item_action_type.name, 
+        ChildNodes = [
+            XmlNodeAsDict(NodeName = 'Provider', NodeInnerText = item_provider.name), 
+            XmlNodeAsDict(NodeName = 'Args', ChildNodes = args)
         ]
     )
     if content_reference is not None:
         action.append_child_node([content_reference])
     return action
 
-def new_detection_nodes(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_item:dict,execution_context:str='System') -> list:
+def new_detection_nodes(authoring_scope_id: str, application_id: str, deployment_type_id: str, detection_item:dict, execution_context: str = 'System') -> list:
     """Output a list of exactly 2 items where item 0 is the
     DetectAction XmlNodeAsDict object and item 1 is itself a list of
     the detection nodes needed for the CustomData node
@@ -1258,58 +1327,58 @@ def new_detection_nodes(authoring_scope_id:str,application_id:str,deployment_typ
         raise ProcessorError(f"Invalid execution context: '{execution_context}'. Valid: {valid}")
     custom_data_nodes = []
     detect_action_params = {
-        "action_type": "DetectAction",
+        "action_type": "DetectAction", 
         "args": []
     }
     if detection_type == 'CustomScript':
         detect_action_params['provider'] = 'Script'
-        detect_action_params['args'].append(new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context))
-        detect_action_params['args'].append(new_arg(arg_name='ScriptType', arg_type='Int32',arg_value='0'))
-        detect_action_params['args'].append(new_arg(arg_name='ScriptBody', arg_type='String',arg_value=detection_item.get('Options',{}).get('ScriptContent','')))
-        detect_action_params['args'].append(new_arg(arg_name='RunAs32Bit', arg_type='Boolean',arg_value=bool(detection_item.get('Options',{}).get('RunAs32Bit') or False)).__str__().lower())
-        custom_data_nodes.append(XmlNodeAsDict(NodeName='DetectionMethod',NodeInnerText='Script'))
+        detect_action_params['args'].append(new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context))
+        detect_action_params['args'].append(new_arg(arg_name = 'ScriptType', arg_type = 'Int32', arg_value = '0'))
+        detect_action_params['args'].append(new_arg(arg_name = 'ScriptBody', arg_type = 'String', arg_value = detection_item.get('Options', {}).get('ScriptContent', '')))
+        detect_action_params['args'].append(new_arg(arg_name = 'RunAs32Bit', arg_type = 'Boolean', arg_value = bool(detection_item.get('Options', {}).get('RunAs32Bit') or False)).__str__().lower())
+        custom_data_nodes.append(XmlNodeAsDict(NodeName = 'DetectionMethod', NodeInnerText = 'Script'))
         custom_data_nodes.append(XmlNodeAsDict(
-            NodeName='DetectionScript',
-            Attributes=[XmlAttributeAsDict(Name='Language',Value='PowerShell')],
-            NodeInnerText=detection_item.get('Options',{}).get('ScriptContent',''))
+            NodeName = 'DetectionScript', 
+            Attributes = [XmlAttributeAsDict(Name = 'Language', Value = 'PowerShell')], 
+            NodeInnerText = detection_item.get('Options', {}).get('ScriptContent', ''))
         )
     else:
-        enhanced_detection = new_enhanced_detection_method_node(authoring_scope_id=authoring_scope_id,application_id=application_id,
-                deployment_type_id=deployment_type_id,detection_config=detection_item)
+        enhanced_detection = new_enhanced_detection_method_node(authoring_scope_id = authoring_scope_id, application_id = application_id, 
+                deployment_type_id = deployment_type_id, detection_config = detection_item)
         xml_string = enhanced_detection.to_xml_string()
         detect_action_params['provider'] = 'Local'
-        detect_action_params['args'].append(new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context))
-        detect_action_params['args'].append(new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string))
-        custom_data_nodes.append(XmlNodeAsDict(NodeName='DetectionMethod',NodeInnerText='Enhanced'))
+        detect_action_params['args'].append(new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context))
+        detect_action_params['args'].append(new_arg(arg_name = 'MethodBody', arg_type = 'String', arg_value = xml_string))
+        custom_data_nodes.append(XmlNodeAsDict(NodeName = 'DetectionMethod', NodeInnerText = 'Enhanced'))
         enhanced_detection['Attributes'].clear()
         custom_data_nodes.append(enhanced_detection)
     detect_action = new_dt_action(**detect_action_params)
-    return [detect_action,custom_data_nodes]
+    return [detect_action, custom_data_nodes]
 
 # Deployment Type
-def new_languages_node(languages:list[str]) -> XmlNodeAsDict:
+def new_languages_node(languages: list[str]) -> XmlNodeAsDict:
     """Create a languages XmlNodeAsDict object"""
     item_languages = []
     for l in languages:
         if l is not None:
-            item_languages.append(XmlNodeAsDict(NodeName='Lang',NodeInnerText=l))
-    languages_node = XmlNodeAsDict(NodeName='Languages',ChildNodes=item_languages)
+            item_languages.append(XmlNodeAsDict(NodeName = 'Lang', NodeInnerText = l))
+    languages_node = XmlNodeAsDict(NodeName = 'Languages', ChildNodes = item_languages)
     return languages_node
 
-def get_deployment_type_reference(deployment_type:XmlNodeAsDict) -> XmlNodeAsDict:
+def get_deployment_type_reference(deployment_type: XmlNodeAsDict) -> XmlNodeAsDict:
     """Create a reference XmlNodeAsDict object from the supplied
     deployment type XmlNodeAsDict
     """
     attributes = [
-        XmlAttributeAsDict(Name='AuthoringScopeId',Value=deployment_type.get_attribute_value('AuthoringScopeId')),
-        XmlAttributeAsDict(Name='LogicalName',Value=deployment_type.get_attribute_value('LogicalName')),
-        XmlAttributeAsDict(Name='Version',Value=deployment_type.get_attribute_value('Version'))
+        XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = deployment_type.get_attribute_value('AuthoringScopeId')), 
+        XmlAttributeAsDict(Name = 'LogicalName', Value = deployment_type.get_attribute_value('LogicalName')), 
+        XmlAttributeAsDict(Name = 'Version', Value = deployment_type.get_attribute_value('Version'))
     ]
-    reference = XmlNodeAsDict(NodeName='DeploymentType',Attributes=attributes)
+    reference = XmlNodeAsDict(NodeName = 'DeploymentType', Attributes = attributes)
     return reference
     
 # Application
-def new_user_categories_node(user_category_unique_ids:list[str]) -> XmlNodeAsDict:
+def new_user_categories_node(user_category_unique_ids: list[str]) -> XmlNodeAsDict:
     """Create a user categories XmlNodeAsDict object from the supplied
     list of user category unique identifiers
     """
@@ -1318,127 +1387,125 @@ def new_user_categories_node(user_category_unique_ids:list[str]) -> XmlNodeAsDic
         child_nodes = []
         for c in user_category_unique_ids:
             child_nodes.append(
-                XmlNodeAsDict(NodeName='Tag',NodeInnerText=c)
+                XmlNodeAsDict(NodeName = 'Tag', NodeInnerText = c)
             )
         params['ChildNodes'] = child_nodes
     user_categories_node = XmlNodeAsDict(**params)
     return user_categories_node
 
-def new_tags_node(tags:list[str]=[]) -> XmlNodeAsDict:
+def new_tags_node(tags: list[str] = []) -> XmlNodeAsDict:
     """Create a tags XmlNodeAsDict object from a list of tag strings"""
     tag_list = []
     for t in tags:
-        tag_list.append(XmlNodeAsDict(NodeName='Tag',NodeInnerText=t))
-    tags_node = XmlNodeAsDict(NodeName='Tags',ChildNodes=tag_list)
+        tag_list.append(XmlNodeAsDict(NodeName = 'Tag', NodeInnerText = t))
+    tags_node = XmlNodeAsDict(NodeName = 'Tags', ChildNodes = tag_list)
     return tags_node
 
-def new_display_info(title:str,language:str='en-US',publisher:str=None,software_version:str=None,release_date:str=datetime.now().strftime("%m/%d/%Y"),
-            description:str=None,info_url:str=None,info_url_text:str=None,privacy_url:str=None,user_categories_node:XmlNodeAsDict=None,
-            tags:list=None,icon_reference:XmlNodeAsDict=None):
+def new_display_info(title: str, language: str = 'en-US', publisher: str = None, software_version: str = None, release_date: str = datetime.now().strftime("%m/%d/%Y"), 
+            description: str = None, info_url: str = None, info_url_text: str = None, privacy_url: str = None, user_categories_node: XmlNodeAsDict = None, 
+            tags: list = None, icon_reference: XmlNodeAsDict = None):
     """Create a new display info node"""
     attributes = [
-        XmlAttributeAsDict(Name='Language',Value=language)
+        XmlAttributeAsDict(Name = 'Language', Value = language)
     ]
     child_nodes = [
-        XmlNodeAsDict(NodeName='Title',NodeInnerText=title),
+        XmlNodeAsDict(NodeName = 'Title', NodeInnerText = title), 
     ]
-    info = XmlNodeAsDict(NodeName='Info',Attributes=attributes,ChildNodes=child_nodes)
-    if description is not None and description != '':
+    info = XmlNodeAsDict(NodeName = 'Info', Attributes = attributes, ChildNodes = child_nodes)
+    if description is not None and description !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='Description',NodeInnerText=description)
+            XmlNodeAsDict(NodeName = 'Description', NodeInnerText = description)
         ])
-    if publisher is not None and publisher != '':
+    if publisher is not None and publisher !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='Publisher',NodeInnerText=publisher)
+            XmlNodeAsDict(NodeName = 'Publisher', NodeInnerText = publisher)
         ])
 
-    if software_version is not None and software_version != '':
+    if software_version is not None and software_version !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='Version',NodeInnerText=software_version)
+            XmlNodeAsDict(NodeName = 'Version', NodeInnerText = software_version)
         ])
-    if release_date is not None and release_date != '':
+    if release_date is not None and release_date !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='ReleaseDate',NodeInnerText=release_date)
+            XmlNodeAsDict(NodeName = 'ReleaseDate', NodeInnerText = release_date)
         ])
     if icon_reference is not None:
         info.append_child_node([
             icon_reference
         ])
-    if info_url is not None and info_url != '':
+    if info_url is not None and info_url !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='InfoUrl',NodeInnerText=info_url)
+            XmlNodeAsDict(NodeName = 'InfoUrl', NodeInnerText = info_url)
         ])
-    if info_url_text is not None and info_url_text != '':
+    if info_url_text is not None and info_url_text !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='InfoUrlText',NodeInnerText=info_url_text)
+            XmlNodeAsDict(NodeName = 'InfoUrlText', NodeInnerText = info_url_text)
         ])
-    if privacy_url is not None and privacy_url != '':
+    if privacy_url is not None and privacy_url !=  '':
         info.append_child_node([
-            XmlNodeAsDict(NodeName='PrivacyUrl',NodeInnerText=privacy_url)
+            XmlNodeAsDict(NodeName = 'PrivacyUrl', NodeInnerText = privacy_url)
         ])
     if user_categories_node is not None:
         info.append_child_node([user_categories_node])
     if len(tags or []) > 0:
-        info.append_child_node([new_tags_node(tags=tags)])
+        info.append_child_node([new_tags_node(tags = tags)])
     return info
 
-def new_display_info_node(display_infos:list,default_language:str='en-US') -> XmlNodeAsDict:
+def new_display_info_node(display_infos: list, default_language: str = 'en-US') -> XmlNodeAsDict:
     """Create a new display info XmlNodeAsDict object from the supplied
     list of display infos
     """
     display_info_node = XmlNodeAsDict(
-        NodeName='DisplayInfo',
-        Attributes=[
-            XmlAttributeAsDict(Name='DefaultLanguage',Value=default_language)
-        ],
-        ChildNodes=display_infos
+        NodeName = 'DisplayInfo', 
+        Attributes = [
+            XmlAttributeAsDict(Name = 'DefaultLanguage', Value = default_language)
+        ], 
+        ChildNodes = display_infos
     )
     return display_info_node
-
-__all__ = ["McmSDMPackageXMLGenerator"]
 
 class McmSDMPackageXMLGenerator(Processor):
     description = "Generate an SDMPackageXML string which represents an MCM Application object."
     input_variables = {
         "mcm_application_configuration": {
-            "required": True,
+            "required": True, 
             "description": (
                 "A nested dictionary object representing the configuration for the application."
-            ),
-        },
+            ), 
+        }, 
         "keychain_password_service": {
-            "required": False,
-            "description": "The service name used to store the password. Defaults to com.github.autopkg.iancohn-recipes.mcmapi",
+            "required": False, 
+            "description": "The service name used to store the password. Defaults to com.github.autopkg.iancohn-recipes.mcmapi", 
             "default": 'com.github.autopkg.iancohn-recipes.mcmapi'
-        },
+        }, 
         "keychain_password_username": {
-            "required": False,
+            "required": False, 
             "description": "The username of the credential to retrieve. Defaults to %MCMAPI_USERNAME%"
-        },
+        }, 
         "mcm_site_server_fqdn": {
-            "required": True,
+            "required": True, 
             "description": "The FQDN of the site server. Ex. mcm.domain.com"
-        },
+        }, 
         "mcm_scope_id": {
-            "required": False,
+            "required": False, 
             "description": "The authoring scope id for objects in the target MCM site."
-        },
+        }, 
         "existing_app_sdmpackagexml": {
-            "required": False,
-            "description": "The SDMPackageXML property of an existing application which should be updated.",
+            "required": False, 
+            "description": "The SDMPackageXML property of an existing application which should be updated.", 
             "default": None
-        },
+        }, 
         "existing_app_ci_id": {
-            "required": False,
-            "description": "The CI_ID property of the application which should be updated.",
+            "required": False, 
+            "description": "The CI_ID property of the application which should be updated.", 
             "default": None
         }
     }
     output_variables = {
-        "SDMPackageXML": {"description": "Serialized XML string representing an application object."},
-        "mcm_scope_id": {"description": "The authoring scope id for objects in the target MCM site."},
-        "mcm_application": {"description": "A dictionary representation of the mcm application"},
-        "mcm_application_ci_id": {"description": "The CI_ID where the application should be posted. 0 indicates a new application."},
+        "SDMPackageXML": {"description": "Serialized XML string representing an application object."}, 
+        "mcm_scope_id": {"description": "The authoring scope id for objects in the target MCM site."}, 
+        "mcm_application": {"description": "A dictionary representation of the mcm application"}, 
+        "mcm_application_ci_id": {"description": "The CI_ID where the application should be posted. 0 indicates a new application."}, 
     }
 
     __doc__ = description
@@ -1454,12 +1521,12 @@ class McmSDMPackageXMLGenerator(Processor):
             url = f"https://{self.fqdn}/AdminService/wmi/SMS_Identification.GetSiteID"
             
             response = requests.request(
-                method='Get',
-                url=url,
-                auth=self.ntlm,
-                headers=self.headers,
-                timeout=30,
-                verify=False
+                method = 'Get', 
+                url = url, 
+                auth = self.ntlm, 
+                headers = self.headers, 
+                timeout = 30, 
+                verify = False
             )
             response.raise_for_status()
             json_response = response.json()
@@ -1477,68 +1544,68 @@ class McmSDMPackageXMLGenerator(Processor):
         except Exception as e:
             raise ProcessorError(f"Failed to retrieve scope ID: {e}")
     
-    def find_application_by_name(self, application_name:str) -> dict:
+    def find_application_by_name(self, application_name: str) -> dict:
         """Connect to MCM, search for an SMS_Application with a
         given name, and return its details
         """
         self.output(f"Attempting to get application ({application_name}) from {self.fqdn}", 2)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_Application"
-        body = {"$filter": f"LocalizedDisplayName eq '{application_name}' and IsLatest eq true",'$select':"CI_ID"}
+        body = {"$filter": f"LocalizedDisplayName eq '{application_name}' and IsLatest eq true", '$select':"CI_ID"}
         appSearchResponse = requests.request(
-            method='GET',
-            url=url,
-            auth=self.ntlm,
-            headers=self.headers,
-            verify=False,
-            params=body
+            method = 'GET', 
+            url = url, 
+            auth = self.ntlm, 
+            headers = self.headers, 
+            verify = False, 
+            params = body
         )
-        self.output(f"Done searching for application. {type(appSearchResponse).__name__} type object returned.",3)
+        self.output(f"Done searching for application. {type(appSearchResponse).__name__} type object returned.", 3)
         searchValue = appSearchResponse.json()["value"]
-        self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}",3)
+        self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}", 3)
         if searchValue.__len__() > 1:
             raise ProcessorError("Application_name must be unique and return one or less results")
         elif searchValue.__len__() == 0:
-            self.output(f"{application_name} not found in {self.fqdn}",2)
+            self.output(f"{application_name} not found in {self.fqdn}", 2)
             return None
         self.output(f"Getting SDMPackageXML for {application_name} from {self.fqdn}", 3)
         appUrl = f"https://{self.fqdn}/AdminService/wmi/SMS_Application({searchValue[0].get('CI_ID')})"
         app = requests.request(
-            method='GET',
-            url=appUrl,
-            auth=self.ntlm,
-            headers=self.headers,
-            verify=False
+            method = 'GET', 
+            url = appUrl, 
+            auth = self.ntlm, 
+            headers = self.headers, 
+            verify = False
         )
         self.output("Done getting SDMPackageXML", 3)
         appJson = app.json()
         appValue = appJson['value'] or []
-        if len(appValue) == 1 and (sdm_package_xml := appValue[0].get('SDMPackageXML', '')) != '':
+        if len(appValue) == 1 and (sdm_package_xml :=  appValue[0].get('SDMPackageXML', '')) !=  '':
             self.output(f"SDMPackageXML length: {len(sdm_package_xml)}")
             return_object = {
-                "SDMPackageXML": sdm_package_xml.replace('<?xml version="1.0" encoding="utf-16"?>','',1),
+                "SDMPackageXML": sdm_package_xml.replace('<?xml version = "1.0" encoding = "utf-16"?>', '', 1), 
                 "ci_id": appValue[0].get("CI_ID")
             }
         else:
             return_object = None
         return return_object
 
-    def find_task_sequence_by_name(self,task_sequence_name:str) -> dict:
+    def find_task_sequence_by_name(self, task_sequence_name: str) -> dict:
         """Connect to MCM, search for task sequence with a given
         name, and return its details"""
         self.output(f"Attempting to get task sequence ({task_sequence_name}) from {self.fqdn}", 2)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_TaskSequencePackage"
-        body = {"$filter": f"Name eq '{task_sequence_name}'",'$select':"Name,PackageId"}
+        body = {"$filter": f"Name eq '{task_sequence_name}'", '$select':"Name, PackageId"}
         searchResponse = requests.request(
-            method='GET',
-            url=url,
-            auth=self.ntlm,
-            headers=self.headers,
-            verify=False,
-            params=body
+            method = 'GET', 
+            url = url, 
+            auth = self.ntlm, 
+            headers = self.headers, 
+            verify = False, 
+            params = body
         )
-        self.output(f"Done searching for task sequence. {type(searchResponse).__name__} type object returned.",3)
+        self.output(f"Done searching for task sequence. {type(searchResponse).__name__} type object returned.", 3)
         searchValue = searchResponse.json()["value"]
-        self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}",3)
+        self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}", 3)
         if searchValue.__len__() > 1:
             raise IndexError("task_sequence_name must be unique and return one or less results")
         elif searchValue.__len__() == 0:
@@ -1559,7 +1626,7 @@ class McmSDMPackageXMLGenerator(Processor):
         except Exception as e:
             raise ProcessorError(f"Failed to retrieve credentials: {e}")
 
-    def get_dt_logicalname_from_application(self,application:XmlNodeAsDict,deployment_type_name_filter:str=None,deployment_type_name_filter_type:str=None) -> str:
+    def get_dt_logicalname_from_application(self, application: XmlNodeAsDict, deployment_type_name_filter: str = None, deployment_type_name_filter_type: str = None) -> str:
         """Return the Logical Name of the deployment type matching
         the filter type and content
         """
@@ -1581,12 +1648,12 @@ class McmSDMPackageXMLGenerator(Processor):
             for d in dts:
                 if d.find_children_by_name('Title')[0].get('NodeInnerText', '') == deployment_type_name_filter:
                     results.append(d.get_attribute_value('LogicalName'))
-        self.output(f"{len(results)} matching deployment types found. {', '.join(results)}",3)
+        self.output(f"{len(results)} matching deployment types found. {', '.join(results)}", 3)
         if len(results) == 0:
             raise ProcessorError("Could not find a deployment type with the given name/filter.")
         return results[0]
 
-    def get_dt_logicalname_from_etree_application(self,application:etree.Element,deployment_type_name_filter:str,deployment_type_name_filter_type:str)->str:
+    def get_dt_logicalname_from_etree_application(self, application:etree.Element, deployment_type_name_filter: str, deployment_type_name_filter_type: str) -> str:
         """Retrieve a deployment type's logical name from an
         application represented as an etree.Element object
         """
@@ -1598,109 +1665,109 @@ class McmSDMPackageXMLGenerator(Processor):
         elif deployment_type_name_filter_type == 'Contains':
             titleFilter = f"contains(text(), \"{deployment_type_name_filter}\")"
         else:
-            titleFilter = f"text()=\"{deployment_type_name_filter}\""
-        results = application.xpath(f"/AppMgmtDigest:AppMgmtDigest/AppMgmtDigest:DeploymentType[AppMgmtDigest:Title[{titleFilter}]]/@LogicalName",namespaces=nsmap)
+            titleFilter = f"text() = \"{deployment_type_name_filter}\""
+        results = application.xpath(f"/AppMgmtDigest:AppMgmtDigest/AppMgmtDigest:DeploymentType[AppMgmtDigest:Title[{titleFilter}]]/@LogicalName", namespaces = nsmap)
         if len(results) == 0:
             raise ProcessorError("Could not find a deployment type with the given name/filter.")
         return results[0]
 
-    def create_user_category(self, user_category_name:str)-> str:
+    def create_user_category(self, user_category_name: str) ->  str:
         """Connect to MCM and create a new user category"""
         self.output(f"Attempting to create user category ({user_category_name}) in {self.fqdn}", 2)
         raise ProcessorError("Creating user categories is not supported.")
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_Application"
-        body = {"CategoryTypeName": "CatalogCategories","Cat" : f"'{user_category_name}' and IsLatest eq true",'$select':"CI_ID"}
+        body = {"CategoryTypeName": "CatalogCategories", "Cat" : f"'{user_category_name}' and IsLatest eq true", '$select':"CI_ID"}
         appSearchResponse = requests.request(
-            method='GET',
-            url=url,
-            auth=self.ntlm,
-            headers=self.headers,
-            verify=False,
-            params=body
+            method = 'GET', 
+            url = url, 
+            auth = self.ntlm, 
+            headers = self.headers, 
+            verify = False, 
+            params = body
         )
-        self.output(f"Done searching for application. {type(appSearchResponse).__name__} type object returned.",3)
+        self.output(f"Done searching for application. {type(appSearchResponse).__name__} type object returned.", 3)
         searchValue = appSearchResponse.json()["value"]
-        self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}",3)
+        self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}", 3)
 
-    def get_user_category_id(self, user_category_name:str) -> str:
+    def get_user_category_id(self, user_category_name: str) -> str:
         """Connect to MCM and search for a given user category
         object
         """
         self.output(f"Attempting to get user category ({user_category_name}) from {self.fqdn}", 3)
-        url = f"https://{self.fqdn}/AdminService/wmi/SMS_CategoryInstance?$filter=LocalizedCategoryInstanceName eq '{user_category_name}'"
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_CategoryInstance?$filter = LocalizedCategoryInstanceName eq '{user_category_name}'"
         searchResponse = requests.request(
-            method='GET',
-            url=url,
-            auth=self.ntlm,
-            headers=self.headers,
-            verify=False         
+            method = 'GET', 
+            url = url, 
+            auth = self.ntlm, 
+            headers = self.headers, 
+            verify = False         
         )
-        self.output(f"Done searching for category. {type(searchResponse).__name__} type object returned.",3)
+        self.output(f"Done searching for category. {type(searchResponse).__name__} type object returned.", 3)
         searchValue = searchResponse.json()["value"]
-        self.output(f"{len(searchValue)} user category objects returned from {self.fqdn}",3)
+        self.output(f"{len(searchValue)} user category objects returned from {self.fqdn}", 3)
         if len(searchValue) == 0:
             return None
         elif len(searchValue) > 1:
             raise ProcessorError('Ambiguous user category')
         else:
-            uq_id = searchValue[0].get('CategoryInstance_UniqueID',None)
+            uq_id = searchValue[0].get('CategoryInstance_UniqueID', None)
             self.output(f"User Category UniqueID: {uq_id}", 3)
             return uq_id
 
-    def merge_deployment_types(self,authoring_scope_id:str,dicts:list[dict]=[],existing_deployment_types:list[XmlNodeAsDict]=[],persist_unhandled_deployment_types:bool=False)->list:
+    def merge_deployment_types(self, authoring_scope_id: str, dicts: list[dict] = [], existing_deployment_types: list[XmlNodeAsDict] = [], persist_unhandled_deployment_types:bool = False) -> list:
         """Match configured deployment types to existing deployment
         types and return an ordered list of deployment types to add to
         an application
         """
         try:
             self.output("Attempting to merge configured deployment types with those from an existing application.", 2)
-            element_lookup = {d.find_children_by_name(node_name='Title')[0].get('NodeInnerText'): d for d in existing_deployment_types}
+            element_lookup = {d.find_children_by_name(node_name = 'Title')[0].get('NodeInnerText'): d for d in existing_deployment_types}
             result = []
             used_titles = set()
             unreferenced = []
             for ix, item in enumerate(dicts):
-                dt_name = item.get('Options',{}).get('DeploymentTypeName','')
+                dt_name = item.get('Options', {}).get('DeploymentTypeName', '')
                 if dt_name == '':
                     raise ProcessorError("Each deployment type must contain a valid name.")
                 priority = item.get('Priority')
-                self.output(f"Getting existing_match for {dt_name} ({priority})",3)
+                self.output(f"Getting existing_match for {dt_name} ({priority})", 3)
                 existing_match = element_lookup.get(dt_name)
                 if existing_match is None:
-                    self.output(f"No existing match found for {dt_name}",3)
+                    self.output(f"No existing match found for {dt_name}", 3)
                 else:
-                    self.output(f"Found a match for {dt_name}",2)
-                dt_logical_name = existing_match.get_attribute_value(attribute_name='LogicalName') if existing_match is not None else McmIdentifier().get_logical_name(object_type_name='DeploymentType')
-                dt_revision = (int(existing_match.get_attribute_value(attribute_name='Version'))) if existing_match is not None else 0
+                    self.output(f"Found a match for {dt_name}", 2)
+                dt_logical_name = existing_match.get_attribute_value(attribute_name = 'LogicalName') if existing_match is not None else McmIdentifier().get_logical_name(object_type_name = 'DeploymentType')
+                dt_revision = (int(existing_match.get_attribute_value(attribute_name = 'Version'))) if existing_match is not None else 0
                 dt_next_revision = dt_revision + 1
                 used_titles.add(dt_name)
                 if priority is None and existing_match is not None:
                     priority = ix + 1
-                result.append({"Type":"dict","Priority":priority,"Object":item,"LogicalName":dt_logical_name,"Version":dt_next_revision})
+                result.append({"Type":"dict", "Priority":priority, "Object":item, "LogicalName":dt_logical_name, "Version":dt_next_revision})
             if persist_unhandled_deployment_types:
-                self.output("Unhandled deployment types will be persisted",3)
+                self.output("Unhandled deployment types will be persisted", 3)
                 for element in existing_deployment_types:
                     self.output("Begin parsing deployment type", 3)
-                    dt_name = element.find_children_by_name(node_name='Title')[0]['NodeInnerText']
+                    dt_name = element.find_children_by_name(node_name = 'Title')[0]['NodeInnerText']
                     dt_revision = int(element.get_attribute_value("Version"))
                     dt_logical_name = element.get_attribute_value('LogicalName')
-                    self.output(f"Deployment Type: {dt_name}({dt_logical_name}): {dt_revision}",3)
+                    self.output(f"Deployment Type: {dt_name}({dt_logical_name}): {dt_revision}", 3)
                     if dt_name not in used_titles:
                         self.output(f"{dt_name} will be inserted into the existing application", 3)
                         unreferenced.append(
                             {
-                                "Type":"XmlNodeAsDict",
-                                "Object":element,
-                                "LogicalName":dt_logical_name,
+                                "Type":"XmlNodeAsDict", 
+                                "Object":element, 
+                                "LogicalName":dt_logical_name, 
                                 "Version": dt_revision
                             }
                         )
                     else:
                         self.output(f"{dt_name} already exists. Skipping it.")
             else:
-                self.output("Unhandled deployment types will not be persisted.",3)
+                self.output("Unhandled deployment types will not be persisted.", 3)
             self.output("Ordering deployment types.", 3)
-            ordered = sorted([r for r in result if r["Priority"] is not None],
-                            key=lambda x: x["Priority"])
+            ordered = sorted([r for r in result if r["Priority"] is not None], 
+                            key = lambda x: x["Priority"])
             unordered = [r for r in result if r["Priority"] is None]
             final = []
             next_priority = 1
@@ -1708,70 +1775,70 @@ class McmSDMPackageXMLGenerator(Processor):
             for r in ordered:
                 while u_ix < len(unreferenced) and next_priority < r["Priority"]:
                     final.append({**unreferenced[u_ix], "Priority": next_priority})
-                    next_priority += 1
+                    next_priority +=  1
             for rem in unreferenced[u_ix:] + unordered:
                 final.append({**rem, "Priority": next_priority})
-                next_priority += 1
+                next_priority +=  1
             self.output("Finished ordering deployment types", 3)
             return final
         except Exception as e:
             raise ProcessorError(e)
 
-    def add_install_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
+    def add_install_action(self, installer_root: XmlNodeAsDict, deployment_type_configuration:dict) -> None:
         """Parse the details of the deployment type dict and
         add a new install action node to the installer root node
         commensurate with the configuration
         """
         try:
-            visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
+            visibility = ProgramVisibility(deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility', 'Hidden'))
         except:
             valid = ', '.join(f.value for f in ProgramVisibility)
-            raise ProcessorError(f"Invalid installation program visibility: '{deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility')}'. Valid: {valid}")
+            raise ProcessorError(f"Invalid installation program visibility: '{deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility')}'. Valid: {valid}")
         try:
-            reboot_behavior = RebootBehavior(deployment_type_configuration.get('Options',{}).get('RebootBehavior','BasedOnExitCode'))
+            reboot_behavior = RebootBehavior(deployment_type_configuration.get('Options', {}).get('RebootBehavior', 'BasedOnExitCode'))
         except:
             valid = ', '.join(f.value for f in RebootBehavior)
-            raise ProcessorError(f"Invalid reboot behavior: '{deployment_type_configuration.get('Options',{}).get('RebootBehavior')}'. Valid: {valid}")
+            raise ProcessorError(f"Invalid reboot behavior: '{deployment_type_configuration.get('Options', {}).get('RebootBehavior')}'. Valid: {valid}")
         install_action_params = {
-            "action_type": "InstallAction",
-            "provider": deployment_type_configuration.get('Technology','Script')
+            "action_type": "InstallAction", 
+            "provider": deployment_type_configuration.get('Technology', 'Script')
         }
-        execution_context = BehaviorTypeToContext[deployment_type_configuration.get('Options',{}).get('InstallationBehaviorType','InstallForSystem')]
-        if ['MSI','Script'].__contains__(install_action_params['provider']):
+        execution_context = BehaviorTypeToContext[deployment_type_configuration.get('Options', {}).get('InstallationBehaviorType', 'InstallForSystem')]
+        if ['MSI', 'Script'].__contains__(install_action_params['provider']):
             install_action_params["args"] = [
-                new_arg(arg_name='InstallCommandLine', arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('InstallationProgram')),
-                new_arg(arg_name='WorkingDirectory', arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('InstallationStartIn')),
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context)
+                new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('InstallationProgram')), 
+                new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('InstallationStartIn')), 
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context)
             ]
             #Logon Requirement
-            if deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
-                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='True'))
-            elif deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
-                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='False'))
+            if deployment_type_configuration.get('Options', {}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
+                install_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'Boolean', arg_value = 'True'))
+            elif deployment_type_configuration.get('Options', {}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
+                install_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'Boolean', arg_value = 'False'))
             else:
-                install_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String'))
+                install_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'String'))
             # Install settings
-            install_action_params['args'].append(new_arg(arg_name='RequiresElevatedRights',arg_type='Boolean',arg_value='false'))
-            requires_user_interaction = (deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction') or '').__str__().lower()
+            install_action_params['args'].append(new_arg(arg_name = 'RequiresElevatedRights', arg_type = 'Boolean', arg_value = 'false'))
+            requires_user_interaction = (deployment_type_configuration.get('Options', {}).get('RequiresUserInteraction') or '').__str__().lower()
             if requires_user_interaction == '':
-                install_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String'))
+                install_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'String'))
             else:
-                install_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=requires_user_interaction))
-            install_action_params['args'].append(new_arg(arg_name='RequiresReboot',arg_type='Boolean',arg_value=(reboot_behavior == 'ForceReboot').__str__().lower()))
-            install_action_params['args'].append(new_arg(arg_name='UserInteractionMode',arg_type='String',arg_value=visibility.name))
-            install_action_params['args'].append(new_arg(arg_name='PostInstallBehavior',arg_type='String',arg_value=reboot_behavior.name))
-            estimated_execute_time = deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins') or 0
-            if (0 <= estimated_execute_time <= 1440) == False:
+                install_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'Boolean', arg_value = requires_user_interaction))
+            install_action_params['args'].append(new_arg(arg_name = 'RequiresReboot', arg_type = 'Boolean', arg_value = (reboot_behavior == 'ForceReboot').__str__().lower()))
+            install_action_params['args'].append(new_arg(arg_name = 'UserInteractionMode', arg_type = 'String', arg_value = visibility.name))
+            install_action_params['args'].append(new_arg(arg_name = 'PostInstallBehavior', arg_type = 'String', arg_value = reboot_behavior.name))
+            estimated_execute_time = deployment_type_configuration.get('Options', {}).get('EstimatedInstallationTimeMins') or 0
+            if (0 <=  estimated_execute_time <=  1440) == False:
                 raise ProcessorError("EstimatedInstallationTime must be an integer between 0 and 1440")
-            install_action_params['args'].append(new_arg(arg_name='ExecuteTime',arg_type='Int32',arg_value=f"{estimated_execute_time}"))
-            max_execute_time = deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins') or  120
-            if (15 <= max_execute_time <= 1440) == False:
+            install_action_params['args'].append(new_arg(arg_name = 'ExecuteTime', arg_type = 'Int32', arg_value = f"{estimated_execute_time}"))
+            max_execute_time = deployment_type_configuration.get('Options', {}).get('MaximumAllowedRuntimeMins') or  120
+            if (15 <=  max_execute_time <=  1440) == False:
                 raise ProcessorError("MaximumAllowedRuntimeMins must be an integer between 15 and 1440")
-            install_action_params['args'].append(new_arg(arg_name='MaxExecuteTime',arg_type='Int32',arg_value=f"{max_execute_time}"))
-            install_action_params['args'].append(new_arg(arg_name='RunAs32Bit',arg_type='Boolean',arg_value=f"{deployment_type_configuration.get('Options',{}).get('Force32BitInstaller',False).__str__().lower()}"))
+            install_action_params['args'].append(new_arg(arg_name = 'MaxExecuteTime', arg_type = 'Int32', arg_value = f"{max_execute_time}"))
+            install_action_params['args'].append(new_arg(arg_name = 'RunAs32Bit', arg_type = 'Boolean', arg_value = f"{deployment_type_configuration.get('Options', {}).get('Force32BitInstaller', False).__str__().lower()}"))
             # Return Codes
-            if deployment_type_configuration.get('Options',{}).get('KeepDefaultReturnCodes',True):
-                success_exit_codes = [0,1707]
+            if deployment_type_configuration.get('Options', {}).get('KeepDefaultReturnCodes', True):
+                success_exit_codes = [0, 1707]
                 reboot_exit_codes = [3010]
                 hardreboot_exit_codes = [1641]
                 fastretry_exit_codes = [1618]
@@ -1783,23 +1850,23 @@ class McmSDMPackageXMLGenerator(Processor):
                 fastretry_exit_codes = []
                 failure_exit_codes = []
             rc_hash = {
-                "Success": success_exit_codes,
-                "Failure": failure_exit_codes,
-                "HardReboot": hardreboot_exit_codes,
-                "Reboot": reboot_exit_codes,
+                "Success": success_exit_codes, 
+                "Failure": failure_exit_codes, 
+                "HardReboot": hardreboot_exit_codes, 
+                "Reboot": reboot_exit_codes, 
                 "FastRetry": fastretry_exit_codes
             }
-            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
+            for rc in (deployment_type_configuration.get('Options', {}).get('CustomReturnCodes') or []):
                 rc_hash[rc['CodeType']].append(rc['ReturnCode'])
             for rc_type in rc_hash.keys():
                 if len(rc_hash[rc_type]) > 0:
-                    self.output(f"Adding Exit Code arg for {rc_type}",3)
-                    install_action_params['args'].append(new_arg(arg_name=f"{rc_type}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
+                    self.output(f"Adding Exit Code arg for {rc_type}", 3)
+                    install_action_params['args'].append(new_arg(arg_name = f"{rc_type}ExitCodes", arg_type = 'Int32Array', arg_value = rc_hash[rc_type]))
             self.output("Done with return codes.", 3)
             # Content Reference
             self.output("Parsing any content references", 1)
-            if deployment_type_configuration.get('Options',{}).get('ContentLocation','') != '':
-                local_content_path_id = id(deployment_type_configuration.get('Options',{}).get('ContentLocation_Local'))
+            if deployment_type_configuration.get('Options', {}).get('ContentLocation', '') !=  '':
+                local_content_path_id = id(deployment_type_configuration.get('Options', {}).get('ContentLocation_Local'))
                 self.output(f"Getting content importer with id: {local_content_path_id}", 2)
                 content_importer = XmlNodeAsDict.instance_map_by_external_id[f"{local_content_path_id}"]
                 self.output("Getting content reference.", 3)
@@ -1809,76 +1876,76 @@ class McmSDMPackageXMLGenerator(Processor):
         elif install_action_params['provider'] == 'TaskSequence':
             raise ProcessorError("TaskSequence deployment types are not yet supported")
             install_action_params["args"] = [
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context),
-                new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string)
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context), 
+                new_arg(arg_name = 'MethodBody', arg_type = 'String', arg_value = xml_string)
             ]
         elif install_action_params['provider'] == 'Windows8App':
             raise ProcessorError("Windows8App deployment types are not yet supported")
             install_action_params["args"] = [
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context),
-                new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string)
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context), 
+                new_arg(arg_name = 'MethodBody', arg_type = 'String', arg_value = xml_string)
             ]
         else:
             raise ProcessorError("Not supported.")
         install_action = new_dt_action(**install_action_params)
         installer_root.append_child_node([install_action])
 
-    def add_uninstall_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
+    def add_uninstall_action(self, installer_root: XmlNodeAsDict, deployment_type_configuration:dict) -> None:
         """Parse the details of the deployment type dict and
         add a new uninstall action node to the installer root node
         commensurate with the configuration
         """
         try:
-            visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
+            visibility = ProgramVisibility(deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility', 'Hidden'))
         except:
             valid = ', '.join(f.value for f in ProgramVisibility)
-            raise ProcessorError(f"Invalid installation program visibility: '{deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility')}'. Valid: {valid}")
+            raise ProcessorError(f"Invalid installation program visibility: '{deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility')}'. Valid: {valid}")
         try:
-            reboot_behavior = RebootBehavior(deployment_type_configuration.get('Options',{}).get('RebootBehavior','BasedOnExitCode'))
+            reboot_behavior = RebootBehavior(deployment_type_configuration.get('Options', {}).get('RebootBehavior', 'BasedOnExitCode'))
         except:
             valid = ', '.join(f.value for f in RebootBehavior)
-            raise ProcessorError(f"Invalid reboot behavior: '{deployment_type_configuration.get('Options',{}).get('RebootBehavior')}'. Valid: {valid}")
+            raise ProcessorError(f"Invalid reboot behavior: '{deployment_type_configuration.get('Options', {}).get('RebootBehavior')}'. Valid: {valid}")
         uninstall_action_params = {
-            "action_type": "UninstallAction",
-            "provider": deployment_type_configuration.get('Technology','Script')
+            "action_type": "UninstallAction", 
+            "provider": deployment_type_configuration.get('Technology', 'Script')
         }
-        execution_context = BehaviorTypeToContext[deployment_type_configuration.get('Options',{}).get('InstallationBehaviorType','InstallForSystem')]
-        if ['MSI','Script'].__contains__(uninstall_action_params['provider']):
+        execution_context = BehaviorTypeToContext[deployment_type_configuration.get('Options', {}).get('InstallationBehaviorType', 'InstallForSystem')]
+        if ['MSI', 'Script'].__contains__(uninstall_action_params['provider']):
             uninstall_action_params["args"] = [
-                new_arg(arg_name='InstallCommandLine', arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('UninstallProgram')),
-                new_arg(arg_name='WorkingDirectory', arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('UninstallStartIn')),
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context)
+                new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('UninstallProgram')), 
+                new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('UninstallStartIn')), 
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context)
             ]
             #Logon Requirement
-            if deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='True'))
-            elif deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='False'))
+            if deployment_type_configuration.get('Options', {}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
+                uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'Boolean', arg_value = 'True'))
+            elif deployment_type_configuration.get('Options', {}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
+                uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'Boolean', arg_value = 'False'))
             else:
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String'))
+                uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'String'))
             # Uninstall settings
-            uninstall_action_params['args'].append(new_arg(arg_name='RequiresElevatedRights',arg_type='Boolean',arg_value='false'))
-            requires_user_interaction = (deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction') or '').__str__().lower()
+            uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresElevatedRights', arg_type = 'Boolean', arg_value = 'false'))
+            requires_user_interaction = (deployment_type_configuration.get('Options', {}).get('RequiresUserInteraction') or '').__str__().lower()
             if requires_user_interaction == '':
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String'))
+                uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'String'))
             else:
-                uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=requires_user_interaction))
-            #uninstall_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
-            uninstall_action_params['args'].append(new_arg(arg_name='RequiresReboot',arg_type='Boolean',arg_value=(reboot_behavior == 'ForceReboot').__str__().lower()))
-            uninstall_action_params['args'].append(new_arg(arg_name='UserInteractionMode',arg_type='String',arg_value=visibility.name))
-            uninstall_action_params['args'].append(new_arg(arg_name='PostInstallBehavior',arg_type='String',arg_value=reboot_behavior.name))
-            estimated_execute_time = deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins',0)
-            if (0 <= estimated_execute_time <= 1440) == False:
+                uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'Boolean', arg_value = requires_user_interaction))
+            #uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'Boolean', arg_value = deployment_type_configuration.get('Options', {}).get('RequiresUserInteraction', False).__str__().lower()))
+            uninstall_action_params['args'].append(new_arg(arg_name = 'RequiresReboot', arg_type = 'Boolean', arg_value = (reboot_behavior == 'ForceReboot').__str__().lower()))
+            uninstall_action_params['args'].append(new_arg(arg_name = 'UserInteractionMode', arg_type = 'String', arg_value = visibility.name))
+            uninstall_action_params['args'].append(new_arg(arg_name = 'PostInstallBehavior', arg_type = 'String', arg_value = reboot_behavior.name))
+            estimated_execute_time = deployment_type_configuration.get('Options', {}).get('EstimatedInstallationTimeMins', 0)
+            if (0 <=  estimated_execute_time <=  1440) == False:
                 raise ProcessorError("EstimatedInstallationTimeMins must be an integer between 0 and 1440")
-            uninstall_action_params['args'].append(new_arg(arg_name='ExecuteTime',arg_type='Int32',arg_value=f"{estimated_execute_time}"))
-            max_execute_time = deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins',120)
-            if (15 <= max_execute_time <= 1440) == False:
+            uninstall_action_params['args'].append(new_arg(arg_name = 'ExecuteTime', arg_type = 'Int32', arg_value = f"{estimated_execute_time}"))
+            max_execute_time = deployment_type_configuration.get('Options', {}).get('MaximumAllowedRuntimeMins', 120)
+            if (15 <=  max_execute_time <=  1440) == False:
                 raise ProcessorError("MaximumAllowedRuntimeMins must be an integer between 15 and 1440")
-            uninstall_action_params['args'].append(new_arg(arg_name='MaxExecuteTime',arg_type='Int32',arg_value=f"{max_execute_time}"))
-            uninstall_action_params['args'].append(new_arg(arg_name='RunAs32Bit',arg_type='Boolean',arg_value=deployment_type_configuration.get('Options',{}).get('Force32BitInstaller',False).__str__().lower()))
+            uninstall_action_params['args'].append(new_arg(arg_name = 'MaxExecuteTime', arg_type = 'Int32', arg_value = f"{max_execute_time}"))
+            uninstall_action_params['args'].append(new_arg(arg_name = 'RunAs32Bit', arg_type = 'Boolean', arg_value = deployment_type_configuration.get('Options', {}).get('Force32BitInstaller', False).__str__().lower()))
             # Return Codes
-            if deployment_type_configuration.get('Options',{}).get('KeepDefaultReturnCodes',True):
-                success_exit_codes = [0,1707]
+            if deployment_type_configuration.get('Options', {}).get('KeepDefaultReturnCodes', True):
+                success_exit_codes = [0, 1707]
                 reboot_exit_codes = [3010]
                 hardreboot_exit_codes = [1641]
                 fastretry_exit_codes = [1618]
@@ -1890,38 +1957,38 @@ class McmSDMPackageXMLGenerator(Processor):
                 fastretry_exit_codes = []
                 failure_exit_codes = []
             rc_hash = {
-                "Success": success_exit_codes,
-                "Failure": failure_exit_codes,
-                "HardReboot": hardreboot_exit_codes,
-                "SoftReboot": reboot_exit_codes,
+                "Success": success_exit_codes, 
+                "Failure": failure_exit_codes, 
+                "HardReboot": hardreboot_exit_codes, 
+                "SoftReboot": reboot_exit_codes, 
                 "FastRetry": fastretry_exit_codes
             }
-            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
+            for rc in (deployment_type_configuration.get('Options', {}).get('CustomReturnCodes') or []):
                 rc_hash[rc['CodeType']].append(rc['ReturnCode'])
             for rc_type in rc_hash.keys():
                 if len(rc_hash[rc_type]) > 0:
-                    uninstall_action_params['args'].append(new_arg(arg_name=f"{rc_type.replace('Soft','',1)}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
+                    uninstall_action_params['args'].append(new_arg(arg_name = f"{rc_type.replace('Soft', '', 1)}ExitCodes", arg_type = 'Int32Array', arg_value = rc_hash[rc_type]))
             # Content Reference
-            uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting') or 'NoneRequired'
-            if uninstall_setting == 'Different' and (deployment_type_configuration.get('Options',{}).get('UninstallContentLocation') or '') != '':
-                content_reference = get_content_reference(content_importer=XmlNodeAsDict.instance_map_by_external_id[f"{id(deployment_type_configuration.get('Options',{}).get('UninstallContentLocation_Local'))}"])
+            uninstall_setting = deployment_type_configuration.get('Options', {}).get('UninstallSetting') or 'NoneRequired'
+            if uninstall_setting == 'Different' and (deployment_type_configuration.get('Options', {}).get('UninstallContentLocation') or '') !=  '':
+                content_reference = get_content_reference(content_importer = XmlNodeAsDict.instance_map_by_external_id[f"{id(deployment_type_configuration.get('Options', {}).get('UninstallContentLocation_Local'))}"])
                 uninstall_action_params['content_reference'] = content_reference
             elif uninstall_setting == 'SameAsInstall':
-                content_reference = get_content_reference(content_importer=XmlNodeAsDict.instance_map_by_external_id[f"{id(deployment_type_configuration.get('Options',{}).get('ContentLocation_Local'))}"])
+                content_reference = get_content_reference(content_importer = XmlNodeAsDict.instance_map_by_external_id[f"{id(deployment_type_configuration.get('Options', {}).get('ContentLocation_Local'))}"])
                 uninstall_action_params['content_reference'] = content_reference
-            elif uninstall_setting == 'Different' and deployment_type_configuration.get('Options',{}).get('UninstallContentLocation','').strip() == '':
+            elif uninstall_setting == 'Different' and deployment_type_configuration.get('Options', {}).get('UninstallContentLocation', '').strip() == '':
                 raise ProcessorError("ContentLocation must be specified when UninstallSetting = 'Different'")
         elif uninstall_action_params['provider'] == 'TaskSequence':
             raise ProcessorError("TaskSequence deployment types are not yet supported")
             uninstall_action_params["args"] = [
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context),
-                new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string)
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context), 
+                new_arg(arg_name = 'MethodBody', arg_type = 'String', arg_value = xml_string)
             ]
         elif uninstall_action_params['provider'] == 'Windows8App':
             raise ProcessorError("Windows8App deployment types are not yet supported")
             uninstall_action_params["args"] = [
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context),
-                new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string)
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context), 
+                new_arg(arg_name = 'MethodBody', arg_type = 'String', arg_value = xml_string)
             ]
         else:
             raise ProcessorError("Not supported.")
@@ -1929,62 +1996,62 @@ class McmSDMPackageXMLGenerator(Processor):
         uninstall_action = new_dt_action(**uninstall_action_params)
         installer_root.append_child_node([uninstall_action])
 
-    def add_repair_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
+    def add_repair_action(self, installer_root: XmlNodeAsDict, deployment_type_configuration:dict) -> None:
         """Parse the details of the deployment type dict and
         add a new repair action node to the installer root node
         commensurate with the configuration
         """
         try:
-            visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
+            visibility = ProgramVisibility(deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility', 'Hidden'))
         except:
             valid = ', '.join(f.value for f in ProgramVisibility)
-            raise ProcessorError(f"Invalid installation program visibility: '{deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility')}'. Valid: {valid}")
+            raise ProcessorError(f"Invalid installation program visibility: '{deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility')}'. Valid: {valid}")
         try:
-            reboot_behavior = RebootBehavior(deployment_type_configuration.get('Options',{}).get('RebootBehavior','BasedOnExitCode'))
+            reboot_behavior = RebootBehavior(deployment_type_configuration.get('Options', {}).get('RebootBehavior', 'BasedOnExitCode'))
         except:
             valid = ', '.join(f.value for f in RebootBehavior)
-            raise ProcessorError(f"Invalid reboot behavior: '{deployment_type_configuration.get('Options',{}).get('RebootBehavior')}'. Valid: {valid}")
+            raise ProcessorError(f"Invalid reboot behavior: '{deployment_type_configuration.get('Options', {}).get('RebootBehavior')}'. Valid: {valid}")
         repair_action_params = {
-            "action_type": "RepairAction",
-            "provider": deployment_type_configuration.get('Technology','Script')
+            "action_type": "RepairAction", 
+            "provider": deployment_type_configuration.get('Technology', 'Script')
         }
-        execution_context = BehaviorTypeToContext[deployment_type_configuration.get('Options',{}).get('InstallationBehaviorType','InstallForSystem')]
-        if ['MSI','Script'].__contains__(repair_action_params['provider']):
+        execution_context = BehaviorTypeToContext[deployment_type_configuration.get('Options', {}).get('InstallationBehaviorType', 'InstallForSystem')]
+        if ['MSI', 'Script'].__contains__(repair_action_params['provider']):
             repair_action_params["args"] = [
-                new_arg(arg_name='InstallCommandLine', arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('RepairProgram')),
-                new_arg(arg_name='WorkingDirectory', arg_type='String',arg_value=deployment_type_configuration.get('Options',{}).get('RepairStartIn')),
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context)
+                new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('RepairProgram')), 
+                new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('RepairStartIn')), 
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context)
             ]
             #Logon Requirement
-            if deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
-                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='True'))
-            elif deployment_type_configuration.get('Options',{}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
-                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='Boolean',arg_value='False'))
+            if deployment_type_configuration.get('Options', {}).get('LogonRequirementType') == 'OnlyWhenUserLoggedOn':
+                repair_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'Boolean', arg_value = 'True'))
+            elif deployment_type_configuration.get('Options', {}).get('LogonRequirementType') == 'OnlyWhenNoUserLoggedOn':
+                repair_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'Boolean', arg_value = 'False'))
             else:
-                repair_action_params['args'].append(new_arg(arg_name='RequiresLogOn',arg_type='String'))
+                repair_action_params['args'].append(new_arg(arg_name = 'RequiresLogOn', arg_type = 'String'))
             # Repair settings
-            repair_action_params['args'].append(new_arg(arg_name='RequiresElevatedRights',arg_type='Boolean',arg_value='false'))
-            requires_user_interaction = (deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction') or '').__str__().lower()
+            repair_action_params['args'].append(new_arg(arg_name = 'RequiresElevatedRights', arg_type = 'Boolean', arg_value = 'false'))
+            requires_user_interaction = (deployment_type_configuration.get('Options', {}).get('RequiresUserInteraction') or '').__str__().lower()
             if requires_user_interaction == '':
-                repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='String'))
+                repair_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'String'))
             else:
-                repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=requires_user_interaction))
-            #repair_action_params['args'].append(new_arg(arg_name='RequiresUserInteraction',arg_type='Boolean',arg_value=deployment_type_configuration.get('Options',{}).get('RequiresUserInteraction',False).__str__().lower()))
-            repair_action_params['args'].append(new_arg(arg_name='RequiresReboot',arg_type='Boolean',arg_value=(reboot_behavior == 'ForceReboot').__str__().lower()))
-            repair_action_params['args'].append(new_arg(arg_name='UserInteractionMode',arg_type='String',arg_value=visibility.name))
-            repair_action_params['args'].append(new_arg(arg_name='PostInstallBehavior',arg_type='String',arg_value=reboot_behavior.name))
-            estimated_execute_time = deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins',0)
-            if (0 <= estimated_execute_time <= 1440) == False:
+                repair_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'Boolean', arg_value = requires_user_interaction))
+            #repair_action_params['args'].append(new_arg(arg_name = 'RequiresUserInteraction', arg_type = 'Boolean', arg_value = deployment_type_configuration.get('Options', {}).get('RequiresUserInteraction', False).__str__().lower()))
+            repair_action_params['args'].append(new_arg(arg_name = 'RequiresReboot', arg_type = 'Boolean', arg_value = (reboot_behavior == 'ForceReboot').__str__().lower()))
+            repair_action_params['args'].append(new_arg(arg_name = 'UserInteractionMode', arg_type = 'String', arg_value = visibility.name))
+            repair_action_params['args'].append(new_arg(arg_name = 'PostInstallBehavior', arg_type = 'String', arg_value = reboot_behavior.name))
+            estimated_execute_time = deployment_type_configuration.get('Options', {}).get('EstimatedInstallationTimeMins', 0)
+            if (0 <=  estimated_execute_time <=  1440) == False:
                 raise ProcessorError("EstimatedInstallationTime must be an integer between 0 and 1440")
-            repair_action_params['args'].append(new_arg(arg_name='ExecuteTime',arg_type='Int32',arg_value=f"{estimated_execute_time}"))
-            max_execute_time = deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins',120)
-            if (15 <= max_execute_time <= 1440) == False:
+            repair_action_params['args'].append(new_arg(arg_name = 'ExecuteTime', arg_type = 'Int32', arg_value = f"{estimated_execute_time}"))
+            max_execute_time = deployment_type_configuration.get('Options', {}).get('MaximumAllowedRuntimeMins', 120)
+            if (15 <=  max_execute_time <=  1440) == False:
                 raise ProcessorError("MaximumAllowedRuntimeMins must be an integer between 15 and 1440")
-            repair_action_params['args'].append(new_arg(arg_name='MaxExecuteTime',arg_type='Int32',arg_value=f"{max_execute_time}"))
-            repair_action_params['args'].append(new_arg(arg_name='RunAs32Bit',arg_type='Boolean',arg_value=deployment_type_configuration.get('Options',{}).get('Force32BitInstaller',False).__str__().lower()))
+            repair_action_params['args'].append(new_arg(arg_name = 'MaxExecuteTime', arg_type = 'Int32', arg_value = f"{max_execute_time}"))
+            repair_action_params['args'].append(new_arg(arg_name = 'RunAs32Bit', arg_type = 'Boolean', arg_value = deployment_type_configuration.get('Options', {}).get('Force32BitInstaller', False).__str__().lower()))
             # Return Codes
-            if deployment_type_configuration.get('Options',{}).get('KeepDefaultReturnCodes',True):
-                success_exit_codes = [0,1707]
+            if deployment_type_configuration.get('Options', {}).get('KeepDefaultReturnCodes', True):
+                success_exit_codes = [0, 1707]
                 reboot_exit_codes = [3010]
                 hardreboot_exit_codes = [1641]
                 fastretry_exit_codes = [1618]
@@ -1996,24 +2063,24 @@ class McmSDMPackageXMLGenerator(Processor):
                 fastretry_exit_codes = []
                 failure_exit_codes = []
             rc_hash = {
-                "Success": success_exit_codes,
-                "Failure": failure_exit_codes,
-                "HardReboot": hardreboot_exit_codes,
-                "SoftReboot": reboot_exit_codes,
+                "Success": success_exit_codes, 
+                "Failure": failure_exit_codes, 
+                "HardReboot": hardreboot_exit_codes, 
+                "SoftReboot": reboot_exit_codes, 
                 "FastRetry": fastretry_exit_codes
             }
-            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
+            for rc in (deployment_type_configuration.get('Options', {}).get('CustomReturnCodes') or []):
                 rc_hash[rc['CodeType']].append(rc['ReturnCode'])
             for rc_type in rc_hash.keys():
                 if len(rc_hash[rc_type]) > 0:
-                    repair_action_params['args'].append(new_arg(arg_name=f"{rc_type.replace('Soft','')}ExitCodes",arg_type='Int32Array',arg_value=rc_hash[rc_type]))
+                    repair_action_params['args'].append(new_arg(arg_name = f"{rc_type.replace('Soft', '')}ExitCodes", arg_type = 'Int32Array', arg_value = rc_hash[rc_type]))
         elif repair_action_params['provider'] == 'TaskSequence':
             raise ProcessorError("TaskSequence deployment types are not yet supported")
         elif repair_action_params['provider'] == 'Windows8App':
             raise ProcessorError("Windows8App deployment types are not yet supported")
             repair_action_params["args"] = [
-                new_arg(arg_name='ExecutionContext', arg_type='String',arg_value=execution_context),
-                new_arg(arg_name='MethodBody', arg_type='String',arg_value=xml_string)
+                new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context), 
+                new_arg(arg_name = 'MethodBody', arg_type = 'String', arg_value = xml_string)
             ]
         else:
             raise ProcessorError("Not supported.")
@@ -2021,166 +2088,166 @@ class McmSDMPackageXMLGenerator(Processor):
         repair_action = new_dt_action(**repair_action_params)
         installer_root.append_child_node([repair_action])
 
-    def add_technology_specific_custom_data(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict,detection_nodes:list) -> None:
+    def add_technology_specific_custom_data(self, installer_root: XmlNodeAsDict, deployment_type_configuration:dict, detection_nodes: list) -> None:
         """Parse the details of the deployment type dict and
         add a custom data node to the installer root node
         commensurate with the configuration
         """
         custom_data_nodes = detection_nodes
         deployment_technology = deployment_type_configuration.get('Technology')
-        if ['MSI','Script'].__contains__(deployment_technology):
-            custom_data_nodes.append(XmlNodeAsDict(NodeName='InstallCommandLine',NodeInnerText=deployment_type_configuration.get('Options',{}).get('InstallationProgram')))
+        if ['MSI', 'Script'].__contains__(deployment_technology):
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = 'InstallCommandLine', NodeInnerText = deployment_type_configuration.get('Options', {}).get('InstallationProgram')))
         elif deployment_technology == 'TaskSequence':
-            custom_data_nodes.append(XmlNodeAsDict(NodeName='InstallCommandLine',NodeInnerText='Task Sequence'))
-        if deployment_type_configuration.get('Options',{}).get('Force32BitInstaller',False).__str__().lower() == 'true':
-            custom_data_nodes.append(XmlNodeAsDict(NodeName='RedirectCommandLine',NodeInnerText='true'))
-        install_content_local = deployment_type_configuration.get('Options',{}).get('ContentLocation_Local','')
-        if ['MSI','Script'].__contains__(deployment_technology):
-            if install_content_local != '':
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = 'InstallCommandLine', NodeInnerText = 'Task Sequence'))
+        if deployment_type_configuration.get('Options', {}).get('Force32BitInstaller', False).__str__().lower() == 'true':
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = 'RedirectCommandLine', NodeInnerText = 'true'))
+        install_content_local = deployment_type_configuration.get('Options', {}).get('ContentLocation_Local', '')
+        if ['MSI', 'Script'].__contains__(deployment_technology):
+            if install_content_local !=  '':
                 install_content = XmlNodeAsDict.instance_map_by_external_id[f"{id(install_content_local)}"]
-                install_content_id = install_content.get_attribute_value(attribute_name='ContentId')
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='InstallContent',Attributes=[XmlAttributeAsDict(Name='ContentId',Value=install_content_id),XmlAttributeAsDict(Name='Version',Value='1')]))
-            uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting') or 'SameAsInstall'
-            uninstall_content_local = deployment_type_configuration.get('Options',{}).get('UninstallContentLocation_Local','')
-            if uninstall_setting == 'SameAsInstall' and install_content_local != '':
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallContent',Attributes=[XmlAttributeAsDict(Name='ContentId',Value=install_content_id),XmlAttributeAsDict(Name='Version',Value='1')]))
-            elif uninstall_setting == 'Different' and uninstall_content_local != '':
+                install_content_id = install_content.get_attribute_value(attribute_name = 'ContentId')
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'InstallContent', Attributes = [XmlAttributeAsDict(Name = 'ContentId', Value = install_content_id), XmlAttributeAsDict(Name = 'Version', Value = '1')]))
+            uninstall_setting = deployment_type_configuration.get('Options', {}).get('UninstallSetting') or 'SameAsInstall'
+            uninstall_content_local = deployment_type_configuration.get('Options', {}).get('UninstallContentLocation_Local', '')
+            if uninstall_setting == 'SameAsInstall' and install_content_local !=  '':
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallContent', Attributes = [XmlAttributeAsDict(Name = 'ContentId', Value = install_content_id), XmlAttributeAsDict(Name = 'Version', Value = '1')]))
+            elif uninstall_setting == 'Different' and uninstall_content_local !=  '':
                 uninstall_content = XmlNodeAsDict.instance_map_by_external_id[f"{id(uninstall_content_local)}"]
-                uninstall_content_id = uninstall_content.get_attribute_value(attribute_name='ContentId')
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallContent',Attributes=[XmlAttributeAsDict(Name='ContentId',Value=uninstall_content_id),XmlAttributeAsDict(Name='Version',Value='1')]))
-            uninstall_command_line = deployment_type_configuration.get('Options',{}).get('UninstallProgram','')
-            uninstall_start_in = deployment_type_configuration.get('Options',{}).get('UninstallStartIn') or ''
-            if uninstall_command_line != '':
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallCommandLine',NodeInnerText=uninstall_command_line))
-            if uninstall_start_in.strip() != '':
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallFolder',NodeInnerText=uninstall_start_in))
-            custom_data_nodes.append(XmlNodeAsDict(NodeName='UninstallSetting',NodeInnerText=uninstall_setting))
-            repair_command_line = deployment_type_configuration.get('Options',{}).get('RepairProgram','')
-            repair_start_in = deployment_type_configuration.get('Options',{}).get('RepairStartIn','')
-            if repair_command_line != '':
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='RepairCommandLine',NodeInnerText=repair_command_line))
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='RepairFolder',NodeInnerText=repair_start_in))
+                uninstall_content_id = uninstall_content.get_attribute_value(attribute_name = 'ContentId')
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallContent', Attributes = [XmlAttributeAsDict(Name = 'ContentId', Value = uninstall_content_id), XmlAttributeAsDict(Name = 'Version', Value = '1')]))
+            uninstall_command_line = deployment_type_configuration.get('Options', {}).get('UninstallProgram', '')
+            uninstall_start_in = deployment_type_configuration.get('Options', {}).get('UninstallStartIn') or ''
+            if uninstall_command_line !=  '':
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallCommandLine', NodeInnerText = uninstall_command_line))
+            if uninstall_start_in.strip() !=  '':
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallFolder', NodeInnerText = uninstall_start_in))
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallSetting', NodeInnerText = uninstall_setting))
+            repair_command_line = deployment_type_configuration.get('Options', {}).get('RepairProgram', '')
+            repair_start_in = deployment_type_configuration.get('Options', {}).get('RepairStartIn', '')
+            if repair_command_line !=  '':
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'RepairCommandLine', NodeInnerText = repair_command_line))
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'RepairFolder', NodeInnerText = repair_start_in))
             self.output("Adding MaxExecute node.", 3)
-            custom_data_nodes.append(XmlNodeAsDict(NodeName="MaxExecuteTime",NodeInnerText=str(deployment_type_configuration.get('Options',{}).get('MaximumAllowedRuntimeMins') or 120)))
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = "MaxExecuteTime", NodeInnerText = str(deployment_type_configuration.get('Options', {}).get('MaximumAllowedRuntimeMins') or 120)))
             self.output("Adding ExecuteTime node.", 3)
-            custom_data_nodes.append(XmlNodeAsDict(NodeName="ExecuteTime",NodeInnerText=str(deployment_type_configuration.get('Options',{}).get('EstimatedInstallationTimeMins') or 0)))
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = "ExecuteTime", NodeInnerText = str(deployment_type_configuration.get('Options', {}).get('EstimatedInstallationTimeMins') or 0)))
             self.output("Added execution time nodes.", 3)
-            if deployment_type_configuration.get('Options',{}).get('KeepDefaultReturnCodes',True):
+            if deployment_type_configuration.get('Options', {}).get('KeepDefaultReturnCodes', True):
                 return_code_nodes = [
-                    XmlNodeAsDict(NodeName="ExitCode",Attributes=[XmlAttributeAsDict(Name="Code",Value="0"),XmlAttributeAsDict(Name="Class",Value="Success")]),
-                    XmlNodeAsDict(NodeName="ExitCode",Attributes=[XmlAttributeAsDict(Name="Code",Value="1707"),XmlAttributeAsDict(Name="Class",Value="Success")]),
-                    XmlNodeAsDict(NodeName="ExitCode",Attributes=[XmlAttributeAsDict(Name="Code",Value="3010"),XmlAttributeAsDict(Name="Class",Value="SoftReboot")]),
-                    XmlNodeAsDict(NodeName="ExitCode",Attributes=[XmlAttributeAsDict(Name="Code",Value="1641"),XmlAttributeAsDict(Name="Class",Value="HardReboot")]),
-                    XmlNodeAsDict(NodeName="ExitCode",Attributes=[XmlAttributeAsDict(Name="Code",Value="1618"),XmlAttributeAsDict(Name="Class",Value="FastRetry")]),
+                    XmlNodeAsDict(NodeName = "ExitCode", Attributes = [XmlAttributeAsDict(Name = "Code", Value = "0"), XmlAttributeAsDict(Name = "Class", Value = "Success")]), 
+                    XmlNodeAsDict(NodeName = "ExitCode", Attributes = [XmlAttributeAsDict(Name = "Code", Value = "1707"), XmlAttributeAsDict(Name = "Class", Value = "Success")]), 
+                    XmlNodeAsDict(NodeName = "ExitCode", Attributes = [XmlAttributeAsDict(Name = "Code", Value = "3010"), XmlAttributeAsDict(Name = "Class", Value = "SoftReboot")]), 
+                    XmlNodeAsDict(NodeName = "ExitCode", Attributes = [XmlAttributeAsDict(Name = "Code", Value = "1641"), XmlAttributeAsDict(Name = "Class", Value = "HardReboot")]), 
+                    XmlNodeAsDict(NodeName = "ExitCode", Attributes = [XmlAttributeAsDict(Name = "Code", Value = "1618"), XmlAttributeAsDict(Name = "Class", Value = "FastRetry")]), 
                 ]
             else:
                 return_code_nodes = []
             rc_type_hash = {
-                "Success": "Success",
-                "Failure": "Failure",
-                "HardReboot": "HardReboot",
-                "Reboot": "SoftReboot",
+                "Success": "Success", 
+                "Failure": "Failure", 
+                "HardReboot": "HardReboot", 
+                "Reboot": "SoftReboot", 
                 "FastRetry": "FastRetry"
             }
-            for rc in (deployment_type_configuration.get('Options',{}).get('CustomReturnCodes') or []):
+            for rc in (deployment_type_configuration.get('Options', {}).get('CustomReturnCodes') or []):
                 node_params = {
-                    "NodeName": "ExitCode",
+                    "NodeName": "ExitCode", 
                     "Attributes": [
-                        XmlAttributeAsDict(Name="Code",Value=str(rc.get('ReturnCode'))),
-                        XmlAttributeAsDict(Name="Class",Value=rc_type_hash[rc.get('CodeType')])
+                        XmlAttributeAsDict(Name = "Code", Value = str(rc.get('ReturnCode'))), 
+                        XmlAttributeAsDict(Name = "Class", Value = rc_type_hash[rc.get('CodeType')])
                     ]
                 }
-                if (code_name := rc.get('Name','')) != '':
-                    node_params['Attributes'].append(XmlAttributeAsDict(Name="Name",Value=code_name))
-                if (code_description := rc.get('Description','')) != '':
+                if (code_name :=  rc.get('Name', '')) !=  '':
+                    node_params['Attributes'].append(XmlAttributeAsDict(Name = "Name", Value = code_name))
+                if (code_description :=  rc.get('Description', '')) !=  '':
                     node_params['NodeInnerText'] = code_description
                 return_code_nodes.append(XmlNodeAsDict(**node_params))
             if len(return_code_nodes) > 0:
-                custom_data_nodes.append(XmlNodeAsDict(NodeName="ExitCodes",ChildNodes=return_code_nodes))
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = "ExitCodes", ChildNodes = return_code_nodes))
             self.output("Add Installation Program Visibility node.", 3)
-            custom_data_nodes.append(XmlNodeAsDict(NodeName="UserInteractionMode",NodeInnerText=(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility') or 'Hidden')))
-        if ['MSI','Script'].__contains__(deployment_technology):
-            allow_uninstall = deployment_type_configuration.get('Options',{}).get('AllowUninstall',True)
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = "UserInteractionMode", NodeInnerText = (deployment_type_configuration.get('Options', {}).get('InstallationProgramVisibility') or 'Hidden')))
+        if ['MSI', 'Script'].__contains__(deployment_technology):
+            allow_uninstall = deployment_type_configuration.get('Options', {}).get('AllowUninstall', True)
             if allow_uninstall:
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='AllowUninstall',NodeInnerText=allow_uninstall.__str__().lower()))
-            source_product_code = deployment_type_configuration.get('Options',{}).get('SourceUpdateProductCode','')
-            if source_product_code != '':
-                custom_data_nodes.append(XmlNodeAsDict(NodeName='SourceUpdateProductCode',NodeInnerText=source_product_code))
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'AllowUninstall', NodeInnerText = allow_uninstall.__str__().lower()))
+            source_product_code = deployment_type_configuration.get('Options', {}).get('SourceUpdateProductCode', '')
+            if source_product_code !=  '':
+                custom_data_nodes.append(XmlNodeAsDict(NodeName = 'SourceUpdateProductCode', NodeInnerText = source_product_code))
         else: # TaskSequence or Windows8App specific nodes.
             pass
-        detect_processes = deployment_type_configuration.get('Options',{}).get('InstallProcessDetection',[])
+        detect_processes = deployment_type_configuration.get('Options', {}).get('InstallProcessDetection', [])
         if len(detect_processes) > 0:
             processes = []
             for ipd in detect_processes:
-                processes.append(new_process_information(process_name=ipd['ProcessName'],process_display_name=ipd['DisplayName']))
-            custom_data_nodes.append(new_install_process_detection(process_information=processes))
-        installer_root.append_child_node([XmlNodeAsDict(NodeName='CustomData',ChildNodes=custom_data_nodes)])
+                processes.append(new_process_information(process_name = ipd['ProcessName'], process_display_name = ipd['DisplayName']))
+            custom_data_nodes.append(new_install_process_detection(process_information = processes))
+        installer_root.append_child_node([XmlNodeAsDict(NodeName = 'CustomData', ChildNodes = custom_data_nodes)])
 
-    def new_installer_node(self,authoring_scope_id:str,application_id:str,logical_name:str,version:int,deployment_type_configuration:dict) -> XmlNodeAsDict:
+    def new_installer_node(self, authoring_scope_id: str, application_id: str, logical_name: str, version:int, deployment_type_configuration:dict) -> XmlNodeAsDict:
         """Create a new installer XmlNodeAsDict object"""
-        installer_root = XmlNodeAsDict(NodeName='Installer',Attributes=[XmlAttributeAsDict(Name='Technology',Value=deployment_type_configuration.get('Technology'))])
+        installer_root = XmlNodeAsDict(NodeName = 'Installer', Attributes = [XmlAttributeAsDict(Name = 'Technology', Value = deployment_type_configuration.get('Technology'))])
         installer_root.append_child_node([
-            XmlNodeAsDict(NodeName='ExecutionContext',NodeInnerText=deployment_type_configuration.get('ExecutionContext','System'))
+            XmlNodeAsDict(NodeName = 'ExecutionContext', NodeInnerText = deployment_type_configuration.get('ExecutionContext', 'System'))
         ])
-        if deployment_type_configuration.get('ExecutionContext','System') != 'System' or deployment_type_configuration.get('LogonRequirementType','') == 'OnlyWhenUserLoggedOn':
-            installer_root.append_child_node([XmlNodeAsDict(NodeName='RequiresLogOn',NodeInnerText='true')])
-        elif deployment_type_configuration.get('LogonRequirementType','') == 'OnlyWhenNoUserLoggedOn':
-            installer_root.append_child_node([XmlNodeAsDict(NodeName='RequiresLogOn',NodeInnerText='false')])
-        content_path = deployment_type_configuration.get('Options',{}).get('ContentLocation')
-        local_content_path = deployment_type_configuration.get('Options',{}).get('ContentLocation_Local')
+        if deployment_type_configuration.get('ExecutionContext', 'System') !=  'System' or deployment_type_configuration.get('LogonRequirementType', '') == 'OnlyWhenUserLoggedOn':
+            installer_root.append_child_node([XmlNodeAsDict(NodeName = 'RequiresLogOn', NodeInnerText = 'true')])
+        elif deployment_type_configuration.get('LogonRequirementType', '') == 'OnlyWhenNoUserLoggedOn':
+            installer_root.append_child_node([XmlNodeAsDict(NodeName = 'RequiresLogOn', NodeInnerText = 'false')])
+        content_path = deployment_type_configuration.get('Options', {}).get('ContentLocation')
+        local_content_path = deployment_type_configuration.get('Options', {}).get('ContentLocation_Local')
         content_nodes = []
-        if [content_path,local_content_path].__contains__(None) == False:
+        if [content_path, local_content_path].__contains__(None) == False:
             self.output("Adding install content", 2)
             content_params = {
-                "content_location": content_path,
-                "content_location_local": local_content_path,
-                "enable_peer_cache": deployment_type_configuration.get('Options',{}).get('EnablePeerCache',True),
-                "fast_network_action": ContentHandlingMode(deployment_type_configuration.get('Options',{}).get('OnFastNetwork','Download')),
-                "slow_network_action": ContentHandlingMode(deployment_type_configuration.get('Options',{}).get('OnSlowNetwork','Download'))
+                "content_location": content_path, 
+                "content_location_local": local_content_path, 
+                "enable_peer_cache": deployment_type_configuration.get('Options', {}).get('EnablePeerCache', True), 
+                "fast_network_action": ContentHandlingMode(deployment_type_configuration.get('Options', {}).get('OnFastNetwork', 'Download')), 
+                "slow_network_action": ContentHandlingMode(deployment_type_configuration.get('Options', {}).get('OnSlowNetwork', 'Download'))
             }
         content_nodes.append(new_content_importer(**content_params))
-        uninstall_setting = deployment_type_configuration.get('Options',{}).get('UninstallSetting') or 'NoneRequired'
+        uninstall_setting = deployment_type_configuration.get('Options', {}).get('UninstallSetting') or 'NoneRequired'
         if uninstall_setting == 'Different':
             content_params = {
-                "content_location": deployment_type_configuration.get('Options',{}).get('UninstallContentLocation',None),
-                "content_location_local": deployment_type_configuration.get('Options',{}).get('UninstallContentLocation_Local',None),
-                "enable_peer_cache": deployment_type_configuration.get('Options',{}).get('EnablePeerCache',True),
-                "fast_network_action": ContentHandlingMode(deployment_type_configuration.get('Options',{}).get('OnFastNetwork','Download')),
-                "slow_network_action": ContentHandlingMode(deployment_type_configuration.get('Options',{}).get('OnSlowNetwork','Download'))
+                "content_location": deployment_type_configuration.get('Options', {}).get('UninstallContentLocation', None), 
+                "content_location_local": deployment_type_configuration.get('Options', {}).get('UninstallContentLocation_Local', None), 
+                "enable_peer_cache": deployment_type_configuration.get('Options', {}).get('EnablePeerCache', True), 
+                "fast_network_action": ContentHandlingMode(deployment_type_configuration.get('Options', {}).get('OnFastNetwork', 'Download')), 
+                "slow_network_action": ContentHandlingMode(deployment_type_configuration.get('Options', {}).get('OnSlowNetwork', 'Download'))
             }
             self.output('Adding uninstall content', 3)
             content_nodes.append(new_content_importer(**content_params))
         self.output('Appending collected content nodes', 3)
-        installer_root.append_child_node([XmlNodeAsDict(NodeName='Contents',ChildNodes=content_nodes)])
+        installer_root.append_child_node([XmlNodeAsDict(NodeName = 'Contents', ChildNodes = content_nodes)])
         self.output('Creating detection nodes', 3)
-        detection_nodes = new_detection_nodes(authoring_scope_id=authoring_scope_id,application_id=application_id,
-                deployment_type_id=logical_name,detection_item=deployment_type_configuration.get('Options',{}).get('Detection'))
+        detection_nodes = new_detection_nodes(authoring_scope_id = authoring_scope_id, application_id = application_id, 
+                deployment_type_id = logical_name, detection_item = deployment_type_configuration.get('Options', {}).get('Detection'))
         self.output('Adding detection node(s) to installer node', 3)
         installer_root.append_child_node([detection_nodes[0]])
         # Install action
         self.output("Adding install action node", 2)
-        self.add_install_action(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration)
+        self.add_install_action(installer_root = installer_root, deployment_type_configuration = deployment_type_configuration)
         # UninstallAction
-        if (deployment_type_configuration.get('Options',{}).get('UninstallProgram') or '').strip() != '':
+        if (deployment_type_configuration.get('Options', {}).get('UninstallProgram') or '').strip() !=  '':
             self.output("Adding uninstall action node", 2)
-            self.add_uninstall_action(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration)
+            self.add_uninstall_action(installer_root = installer_root, deployment_type_configuration = deployment_type_configuration)
         # RepairAction
-        if (deployment_type_configuration.get('Options',{}).get('RepairProgram') or '').strip() != '':
+        if (deployment_type_configuration.get('Options', {}).get('RepairProgram') or '').strip() !=  '':
             self.output("Adding repair action node", 2)
-            self.add_repair_action(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration)
+            self.add_repair_action(installer_root = installer_root, deployment_type_configuration = deployment_type_configuration)
         # CustomData
         self.output(f"Adding custom data specific to {deployment_type_configuration.get('Technology')} deployment technology.", 3)
-        self.add_technology_specific_custom_data(installer_root=installer_root,deployment_type_configuration=deployment_type_configuration,detection_nodes=detection_nodes[1])
+        self.add_technology_specific_custom_data(installer_root = installer_root, deployment_type_configuration = deployment_type_configuration, detection_nodes = detection_nodes[1])
         self.output("Finished adding custom data.", 3)
         return installer_root
 
-    def new_deployment_type(self,authoring_scope_id:str,application_id:str,logical_name:str,version:int,deployment_type_configuration:dict) -> XmlNodeAsDict:
+    def new_deployment_type(self, authoring_scope_id: str, application_id: str, logical_name: str, version:int, deployment_type_configuration:dict) -> XmlNodeAsDict:
         """Create a new deployment type XmlNodeAsDict object"""
         self.output("Generating a deployment type node.", 3)
         attributes = [
-            XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
-            XmlAttributeAsDict(Name='LogicalName',Value=logical_name),
-            XmlAttributeAsDict(Name='Version',Value=str(version))
+            XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = authoring_scope_id), 
+            XmlAttributeAsDict(Name = 'LogicalName', Value = logical_name), 
+            XmlAttributeAsDict(Name = 'Version', Value = str(version))
         ]
         try:
             self.output("Getting technology type.", 3)
@@ -2188,96 +2255,96 @@ class McmSDMPackageXMLGenerator(Processor):
         except:
             valid = ', '.join(f.value for f in DeploymentTechnology)
             raise ProcessorError(f"Invalid deployment technology: '{deployment_type_configuration.get('Technology')}'. Valid: {valid}")
-        title = deployment_type_configuration.get('Options',{}).get('DeploymentTypeName','Install')
+        title = deployment_type_configuration.get('Options', {}).get('DeploymentTypeName', 'Install')
         self.output(f"Title: {title}", 3)
-        node = XmlNodeAsDict(NodeName='DeploymentType',Attributes=attributes)
-        child_nodes = [XmlNodeAsDict(NodeName='Title',NodeInnerText=title,Attributes=[new_resource_id_attribute()])]
+        node = XmlNodeAsDict(NodeName = 'DeploymentType', Attributes = attributes)
+        child_nodes = [XmlNodeAsDict(NodeName = 'Title', NodeInnerText = title, Attributes = [new_resource_id_attribute()])]
         # Append administrator comments
-        administrator_comment = deployment_type_configuration.get('Options',{}).get('AdministratorComment','')
-        if administrator_comment != '':
-            child_nodes.append(XmlNodeAsDict(NodeName="Description",Attributes=[new_resource_id_attribute()],NodeInnerText=administrator_comment))
+        administrator_comment = deployment_type_configuration.get('Options', {}).get('AdministratorComment', '')
+        if administrator_comment !=  '':
+            child_nodes.append(XmlNodeAsDict(NodeName = "Description", Attributes = [new_resource_id_attribute()], NodeInnerText = administrator_comment))
         else:
-            child_nodes.append(XmlNodeAsDict(NodeName="Description",Attributes=[new_resource_id_attribute()]))
+            child_nodes.append(XmlNodeAsDict(NodeName = "Description", Attributes = [new_resource_id_attribute()]))
         # Append languages
-        languages = deployment_type_configuration.get('Options',{}).get('Languages',[])
+        languages = deployment_type_configuration.get('Options', {}).get('Languages', [])
         if languages == None:
             languages_list = []
-        elif isinstance(languages,str):
+        elif isinstance(languages, str):
             languages_list = [languages]
-        elif isinstance(languages,list):
+        elif isinstance(languages, list):
             languages_list = languages
         if len(languages_list) > 0:
             child_nodes.append(new_languages_node(languages_list))
         # Append requirements
         requirements_rules = []
-        requirements = deployment_type_configuration.get('Options',{}).get('Requirements') or []
+        requirements = deployment_type_configuration.get('Options', {}).get('Requirements') or []
         self.output(f"Assembling {len(requirements)} requirements", 2)
         for r in requirements:
             rule_config_type = r['Type']
             rule_getter = get_requirements_rule_config[rule_config_type]
-            rule_id = McmIdentifier().get_logical_name(object_type_name='Rule')
+            rule_id = McmIdentifier().get_logical_name(object_type_name = 'Rule')
             self.output(f"Configuring requirement rule '{rule_id}' from {rule_config_type}", 3)
-            requirements_rules.append(rule_getter(rule=r['Rule'],rule_id=rule_id))
+            requirements_rules.append(rule_getter(rule = r['Rule'], rule_id = rule_id))
         if len(requirements_rules) > 0:
             self.output("Adding requirements node", 2)
-            child_nodes.append(XmlNodeAsDict(NodeName='Requirements',ChildNodes=requirements_rules))
+            child_nodes.append(XmlNodeAsDict(NodeName = 'Requirements', ChildNodes = requirements_rules))
         
         # Append dependencies
         self.output("Examining dependencies", 3)
-        dependency_groups = deployment_type_configuration.get('Options',{}).get('DependencyGroups') or []
+        dependency_groups = deployment_type_configuration.get('Options', {}).get('DependencyGroups') or []
 
         if (len(dependency_groups) > 0):
             self.output("Creating dependency groups", 3)
             dependency_group_nodes = []
             for dg in dependency_groups:
                 dependency_nodes = []
-                for n in dg.get('Dependencies',[]):
-                    required_app_search = self.find_application_by_name(application_name=n['ApplicationName'])
+                for n in dg.get('Dependencies', []):
+                    required_app_search = self.find_application_by_name(application_name = n['ApplicationName'])
                     if required_app_search is None:
                         raise ProcessorError(f"Application '{['ApplicationName']}' was not found in MCM.")
                     required_app = XmlNodeAsDict.from_xml_string_with_tracking(xml_string = required_app_search['SDMPackageXML'])
-                    self.output("Got dependency required app",3)
+                    self.output("Got dependency required app", 3)
                     # Select the right deployment type
-                    required_app_id = required_app.find_children_by_name('Application')[0].get_attribute_value(attribute_name='LogicalName')
-                    self.output(f"This dependency will use application with id: {required_app_id}",3)
+                    required_app_id = required_app.find_children_by_name('Application')[0].get_attribute_value(attribute_name = 'LogicalName')
+                    self.output(f"This dependency will use application with id: {required_app_id}", 3)
                     dt_finder_params = {
-                        "application": required_app,
+                        "application": required_app, 
                     }
-                    if n.get('DeploymentTypeFilter', '') != '':
+                    if n.get('DeploymentTypeFilter', '') !=  '':
                         dt_finder_params['deployment_type_name_filter'] = n.get('DeploymentTypeFilter')
-                        dt_finder_params['deployment_type_name_filter_type'] = n.get('DeploymentTypeFilterType','Contains')
-                    self.output("Calling get_dt_logicalname_from_application",3)
+                        dt_finder_params['deployment_type_name_filter_type'] = n.get('DeploymentTypeFilterType', 'Contains')
+                    self.output("Calling get_dt_logicalname_from_application", 3)
                     dt_logical_name = self.get_dt_logicalname_from_application(**dt_finder_params)
                     self.output(f"Found dependency: {dt_logical_name}. Adding it to this dependency node.")
-                    dependency_nodes.append(new_dependency(authoring_scope_id=authoring_scope_id,
-                            application_logical_name=required_app_id,dt_logical_name=dt_logical_name,auto_install=n.get('AutoInstall',False)))
-                self.output(f"Finished with the dependency group {dg['DependencyGroupName']}",3)
-                dependency_group_nodes.append(new_dependency_group(rule_name=dg["DependencyGroupName"],dependencies=dependency_nodes))
-            self.output("Finished constructing dependency groups.",3)
-            dependencies_node = new_dependencies_node(dependency_groups=dependency_group_nodes)
+                    dependency_nodes.append(new_dependency(authoring_scope_id = authoring_scope_id, 
+                            application_logical_name = required_app_id, dt_logical_name = dt_logical_name, auto_install = n.get('AutoInstall', False)))
+                self.output(f"Finished with the dependency group {dg['DependencyGroupName']}", 3)
+                dependency_group_nodes.append(new_dependency_group(rule_name = dg["DependencyGroupName"], dependencies = dependency_nodes))
+            self.output("Finished constructing dependency groups.", 3)
+            dependencies_node = new_dependencies_node(dependency_groups = dependency_group_nodes)
             child_nodes.append(dependencies_node)
         self.output("Adding common nodes to deployment type", 3)
-        child_nodes.append(XmlNodeAsDict(NodeName='DeploymentTechnology',NodeInnerText=f"GLOBAL/{technology.name}DeploymentTechnology"))
-        child_nodes.append(XmlNodeAsDict(NodeName='Technology',NodeInnerText=technology.name))
-        child_nodes.append(XmlNodeAsDict(NodeName='Hosting',NodeInnerText=deployment_type_configuration.get('Hosting','Native')))
+        child_nodes.append(XmlNodeAsDict(NodeName = 'DeploymentTechnology', NodeInnerText = f"GLOBAL/{technology.name}DeploymentTechnology"))
+        child_nodes.append(XmlNodeAsDict(NodeName = 'Technology', NodeInnerText = technology.name))
+        child_nodes.append(XmlNodeAsDict(NodeName = 'Hosting', NodeInnerText = deployment_type_configuration.get('Hosting', 'Native')))
         # Append installer
         self.output("Adding installer node", 3)
-        installer_node = self.new_installer_node(authoring_scope_id=authoring_scope_id,application_id=application_id,
-                logical_name=logical_name,version=version,deployment_type_configuration=deployment_type_configuration)
+        installer_node = self.new_installer_node(authoring_scope_id = authoring_scope_id, application_id = application_id, 
+                logical_name = logical_name, version = version, deployment_type_configuration = deployment_type_configuration)
         child_nodes.append(installer_node)
         node.append_child_node(child_nodes)
         return node
 
     def main(self):
         """Main McmAppXmlGenerator process"""
-        self.output("Generating headers.",3)
+        self.output("Generating headers.", 3)
         self.headers = {
-            "Accept": "application/json",
+            "Accept": "application/json", 
             "Content-Type": "application/json"
         }
-        self.output("Checking supplied parameters",3)
+        self.output("Checking supplied parameters", 3)
         keychainServiceName = self.env.get("keychain_password_service", self.input_variables["keychain_password_service"]["default"])
-        keychainUsername = self.env.get("keychain_password_username",self.env.get("MCMAPI_USERNAME",''))
+        keychainUsername = self.env.get("keychain_password_username", self.env.get("MCMAPI_USERNAME", ''))
         self.fqdn = self.env.get("mcm_site_server_fqdn", '')
 
         if (self.fqdn == None or self.fqdn == ''):
@@ -2290,56 +2357,56 @@ class McmSDMPackageXMLGenerator(Processor):
             raise ValueError("keychain_password_username cannot be blank")
         
         self.output("Generating an NTLM auth object.", 3)
-        self.ntlm = self.get_mcm_ntlm_auth(keychain_service_name=keychainServiceName,keychain_username=keychainUsername)
+        self.ntlm = self.get_mcm_ntlm_auth(keychain_service_name = keychainServiceName, keychain_username = keychainUsername)
         
         try:
             # Define namespaces
             appNs = get_nsmap('AppMgmtDigest')
             self.nsmap = appNs['nsmap']
             
-            self.authoringScope = self.get_mcm_scope_id()
+            self.authoring_scope = self.get_mcm_scope_id()
             # Search for existing app
             app = self.env.get('mcm_application_configuration')
-            behaviorIfAppExists = app.get('BehaviorIfExists','Exit')
+            behavior_if_app_exists = app.get('BehaviorIfExists', 'Exit')
             existing_app_ci_id = self.env.get('existing_app_ci_id') or 0
             self.output(f"Existing CI_ID: {existing_app_ci_id}", 3)
             existing_app_sdmpackagexml = self.env.get('existing_app_sdmpackagexml') or ''
             self.output(f"Existing SDMPackageXML Length: {len(existing_app_sdmpackagexml)}", 3)
-            if existing_app_sdmpackagexml != '' and existing_app_ci_id > 0:
+            if existing_app_sdmpackagexml !=  '' and existing_app_ci_id > 0:
                 self.output("An existing application with this name was located.", 2)
-                existingApp = XmlNodeAsDict.from_xml_string_with_tracking(xml_string = existing_app_sdmpackagexml.replace('<?xml version="1.0" encoding="utf-16"?>','',1))
+                existing_app = XmlNodeAsDict.from_xml_string_with_tracking(xml_string = existing_app_sdmpackagexml.replace('<?xml version = "1.0" encoding = "utf-16"?>', '', 1))
             else:
                 self.output(f"Existing app does not exist.", 3)
-                existingApp = None
-            isNewApp = True
-            appName = app.get('Name')
-            if existingApp is not None and behaviorIfAppExists == 'Exit':
-                self.output(f"The application already exists and BehaviorIfExists was set to 'Exit'. Nothing to do.",1)
+                existing_app = None
+            is_new_app = True
+            app_name = app.get('Name')
+            if existing_app is not None and behavior_if_app_exists == 'Exit':
+                self.output(f"The application already exists and BehaviorIfExists was set to 'Exit'. Nothing to do.", 1)
                 return
-            if existingApp is None:
+            if existing_app is None:
                 self.output("A new application object will be created.", 3)
                 pass
-            elif behaviorIfAppExists == 'Update':
-                isNewApp = False
+            elif behavior_if_app_exists == 'Update':
+                is_new_app = False
                 self.output('Using the existing Logical Name and CI_ID for the application and incrementing the revision/version.', 1)
-                appName = app.get('Name')
-                app_nodes = existingApp.find_children_by_name('Application')
-                self.output(f"{appName} contains {len(app_nodes)} application nodes.", 3)
-                appLogicalName = app_nodes[0].get_attribute_value('LogicalName')
-                appVersion = int(existingApp.find_children_by_name('Application')[0].get_attribute_value('Version')) + 1
+                app_name = app.get('Name')
+                app_nodes = existing_app.find_children_by_name('Application')
+                self.output(f"{app_name} contains {len(app_nodes)} application nodes.", 3)
+                app_logical_name = app_nodes[0].get_attribute_value('LogicalName')
+                app_version = int(existing_app.find_children_by_name('Application')[0].get_attribute_value('Version')) + 1
                 self.env['mcm_application_ci_id'] = existing_app_ci_id
-            elif behaviorIfAppExists == 'AppendIndex':
+            elif behavior_if_app_exists == 'AppendIndex':
                 self.output(f"An index will be appended.", 3)
                 done = False
                 index = 1
                 while done == False and index < 20:
-                    searchName = f"{app.get('Name')} ({index.__str__()})"
-                    result = self.find_application_by_name(searchName)
+                    search_name = f"{app.get('Name')} ({index.__str__()})"
+                    result = self.find_application_by_name(search_name)
                     if result is None:
                         self.output(f"Appending an index ({index.__str__()}) to the application name.", 3)
-                        appName = searchName
+                        app_name = search_name
                         done = True
-                    index += 1
+                    index +=  1
                     if index == 20:
                         self.output("Wow... There are 20 versions of this application. You should probably look at this.", 3)
                         break
@@ -2348,227 +2415,227 @@ class McmSDMPackageXMLGenerator(Processor):
                 if done == False:
                     raise ProcessorError("Could not find a name that was not already taken.")
                 self.env['mcm_application_ci_id'] = 0
-            elif behaviorIfAppExists == 'AppendVersion':
-                searchName = f"{app.get('Name')} {app.get('SoftwareVersion')}"
-                self.output(f"Checking to see if an app with the version appended exists ({searchName}).", 3)
-                result = self.find_application_by_name(searchName)
+            elif behavior_if_app_exists == 'AppendVersion':
+                search_name = f"{app.get('Name')} {app.get('SoftwareVersion')}"
+                self.output(f"Checking to see if an app with the version appended exists ({search_name}).", 3)
+                result = self.find_application_by_name(search_name)
                 if result is None:
                     self.output("Appending the version to the application name.", 3)
-                    appName = searchName
+                    app_name = search_name
                 else:
-                    raise ProcessorError(f"An application already exists which already includes the version in the title. ({searchName})")
+                    raise ProcessorError(f"An application already exists which already includes the version in the title. ({search_name})")
             else:
                 raise ProcessorError("Invalid setting for BehaviorIfExists.")
-            if isNewApp == True:
-                appVersion = 1
-                appLogicalName = McmIdentifier().get_logical_name('Application')
+            if is_new_app == True:
+                app_version = 1
+                app_logical_name = McmIdentifier().get_logical_name('Application')
                 self.env['mcm_application_ci_id'] = 0            
-            self.output(f"\n\tName: {appName}\n\tLogicalName: {appLogicalName}\n\tRevision: {appVersion}\n\tCI_ID: {existing_app_ci_id}",3)
+            self.output(f"\n\tName: {app_name}\n\tLogicalName: {app_logical_name}\n\tRevision: {app_version}\n\tCI_ID: {existing_app_ci_id}", 3)
             self.output("Examining deployment types.", 1)
-            if self.env.get('mcm_application_ci_id',0) > 0:
-                existingDts = existingApp.find_children_by_name(node_name='DeploymentType')
-                self.output(f"Comparing configured deployment types to {len(app.get('DeploymentTypes',[]))} deployment types in the existing application.", 3)
-                merged = self.merge_deployment_types(authoring_scope_id=self.authoringScope,dicts=app.get('DeploymentTypes',[]),existing_deployment_types=existingDts,persist_unhandled_deployment_types=app.get('PersistUnhandledDeploymentTypes',False))
+            if self.env.get('mcm_application_ci_id', 0) > 0:
+                existingDts = existing_app.find_children_by_name(node_name = 'DeploymentType')
+                self.output(f"Comparing configured deployment types to {len(app.get('DeploymentTypes', []))} deployment types in the existing application.", 3)
+                merged = self.merge_deployment_types(authoring_scope_id = self.authoring_scope, dicts = app.get('DeploymentTypes', []), existing_deployment_types = existingDts, persist_unhandled_deployment_types = app.get('PersistUnhandledDeploymentTypes', False))
             else:
                 self.output("Deployment types from the supplied configuration will be used.", 3)
-                merged = self.merge_deployment_types(authoring_scope_id=self.authoringScope,dicts=app.get('DeploymentTypes',[]),existing_deployment_types=[])
+                merged = self.merge_deployment_types(authoring_scope_id = self.authoring_scope, dicts = app.get('DeploymentTypes', []), existing_deployment_types = [])
             self.output('Done examining deployment types.', 3)
             dt_list = []
             for dt in merged:
                 if dt["Type"] == 'element':
-                    dt_list.append(XmlNodeAsDict.convert_element_to_dict(dt['Object'],namespace_mode='PersistAsAttribute',parent_namespace=existingApp.nsmap,is_root=False))
+                    dt_list.append(XmlNodeAsDict.convert_element_to_dict(dt['Object'], namespace_mode = 'PersistAsAttribute', parent_namespace = existing_app.nsmap, is_root = False))
                 elif dt["Type"] == "XmlNodeAsDict":
                     self.output("Appending the existing deployment type", 3)
                     dt_list.append(dt['Object'])
                 else:
                     self.output("Creating a new deployment type.", 3)
-                    dt_list.append(self.new_deployment_type(authoring_scope_id=self.authoringScope,application_id=appLogicalName,
-                            logical_name=dt['LogicalName'],version=dt['Version'],deployment_type_configuration=dt['Object']))
+                    dt_list.append(self.new_deployment_type(authoring_scope_id = self.authoring_scope, application_id = app_logical_name, 
+                            logical_name = dt['LogicalName'], version = dt['Version'], deployment_type_configuration = dt['Object']))
             self.output("Creating application object.", 1)
             app_attributes = [
-                XmlAttributeAsDict(Name='AuthoringScopeId',Value=self.authoringScope),
-                XmlAttributeAsDict(Name='LogicalName',Value=appLogicalName),
-                XmlAttributeAsDict(Name='Version',Value=str(appVersion))
+                XmlAttributeAsDict(Name = 'AuthoringScopeId', Value = self.authoring_scope), 
+                XmlAttributeAsDict(Name = 'LogicalName', Value = app_logical_name), 
+                XmlAttributeAsDict(Name = 'Version', Value = str(app_version))
             ]
-            application = XmlNodeAsDict(NodeName='Application',Attributes=app_attributes)
+            application = XmlNodeAsDict(NodeName = 'Application', Attributes = app_attributes)
             # Append display info
             self.output("Creating DisplayInfo", 2)
-            configuredDisplayInfo = app.get('DisplayInfo') or {}
-            configuredInfos = configuredDisplayInfo.get('Infos') or []
+            configured_display_info = app.get('DisplayInfo') or {}
+            configured_infos = configured_display_info.get('Infos') or []
             self.output("Getting details for any configured icons.", 3)
-            iconFileUnixPaths = []
-            if app.get('IconFileUnixPath','') != '':
-                iconFileUnixPaths.append(app.get('IconFileUnixPath'))
-            for v in [x.get('IconFileUnixPath') for x in configuredInfos if x.get("IconFileUnixPath","") != ""]:
-                if not (iconFileUnixPaths.__contains__(v)):
-                    iconFileUnixPaths.append(v)
-            iconResources = []
-            iconResourcesHash = {}
-            iconReferencesHash = {}
-            allResources = []
+            icon_file_unix_paths = []
+            if app.get('IconFileUnixPath', '') !=  '':
+                icon_file_unix_paths.append(app.get('IconFileUnixPath'))
+            for v in [x.get('IconFileUnixPath') for x in configured_infos if x.get("IconFileUnixPath", "") !=  ""]:
+                if not (icon_file_unix_paths.__contains__(v)):
+                    icon_file_unix_paths.append(v)
+            icon_resources = []
+            icon_resources_hash = {}
+            icon_references_hash = {}
+            all_resources = []
             self.output("Getting icon resource hashes.", 3)
-            for i in iconFileUnixPaths:
-                self.output(f"{i}",3 )
-                iconResourcesHash[i] = new_icon_resource(local_path=i)
-                iconReferencesHash[i] = get_icon_reference(icon_resource=iconResourcesHash[i])
-                allResources.append(iconResourcesHash[i])
-                iconResources.append(iconResourcesHash[i])
-            self.output(f"Collected {len(list(iconResourcesHash.keys()))} icon resource details.", 3)
+            for i in icon_file_unix_paths:
+                self.output(f"{i}", 3 )
+                icon_resources_hash[i] = new_icon_resource(local_path = i)
+                icon_references_hash[i] = get_icon_reference(icon_resource = icon_resources_hash[i])
+                all_resources.append(icon_resources_hash[i])
+                icon_resources.append(icon_resources_hash[i])
+            self.output(f"Collected {len(list(icon_resources_hash.keys()))} icon resource details.", 3)
             # Get UserCategory info
             self.output("Getting UserCategory details.", 3)
-            userCategoryNames = []
+            user_category_names = []
             for c in (app.get('UserCategories') or []):
-                userCategoryNames.append(c)
-            for namegroup in [y.get('UserCategories') for y in configuredInfos if len(y.get('UserCategories',[])) > 0]:
+                user_category_names.append(c)
+            for namegroup in [y.get('UserCategories') for y in configured_infos if len(y.get('UserCategories', [])) > 0]:
                 for n in namegroup:
-                    if not (userCategoryNames.__contains__(n)):
-                        userCategoryNames.append(n)
-            userCategories = dict.fromkeys(userCategoryNames)
-            for cn in list(userCategories.keys()):
-                userCategories[cn] = self.get_user_category_id(cn)
-            self.output(f"Collected {len(list(userCategories.keys()))} UserCategory detail objects.", 3)
+                    if not (user_category_names.__contains__(n)):
+                        user_category_names.append(n)
+            user_categories = dict.fromkeys(user_category_names)
+            for cn in list(user_categories.keys()):
+                user_categories[cn] = self.get_user_category_id(cn)
+            self.output(f"Collected {len(list(user_categories.keys()))} UserCategory detail objects.", 3)
             # Default DisplayInfo
             self.output("Defining parameters for the default DisplayInfo.", 3)
-            defaultInfoParams = {}
-            defaultLanguage = app.get('DefaultLanguage', 'en-US')
-            defaultInfoParams["language"] = defaultLanguage
-            defaultLocalizedDisplayName = app.get('LocalizedDisplayName', app.get('Name',self.env.get('NAME','')))
-            if defaultLocalizedDisplayName == '':
+            default_info_params = {}
+            default_language = app.get('DefaultLanguage', 'en-US')
+            default_info_params["language"] = default_language
+            default_localized_display_name = app.get('LocalizedDisplayName', app.get('Name', self.env.get('NAME', '')))
+            if default_localized_display_name == '':
                 raise ProcessorError('Applications must have a name.')
-            defaultInfoParams["title"] = defaultLocalizedDisplayName
-            defaultLocalizedDescription = app.get('LocalizedDescription',app.get('Description'))
-            defaultInfoParams["description"] = defaultLocalizedDescription
-            if defaultLocalizedDescription != '':
-                defaultInfoParams["description"] = defaultLocalizedDescription
-            defaultIconFileUnixPath = app.get('IconFileUnixPath', None)
-            if defaultIconFileUnixPath is not None:
-                defaultInfoParams["icon_reference"] = iconReferencesHash[defaultIconFileUnixPath]
-            defaultKeywords = app.get('Keyword',[])
-            defaultLinkText = app.get('InfoUrlText', None)
-            defaultPrivacyUrl = app.get('PrivacyUrl', None)
-            defaultUserDocumentation = app.get('UserDocumentation', None)
+            default_info_params["title"] = default_localized_display_name
+            default_localized_description = app.get('LocalizedDescription', app.get('Description'))
+            default_info_params["description"] = default_localized_description
+            if default_localized_description !=  '':
+                default_info_params["description"] = default_localized_description
+            default_icon_file_unix_path = app.get('IconFileUnixPath', None)
+            if default_icon_file_unix_path is not None:
+                default_info_params["icon_reference"] = icon_references_hash[default_icon_file_unix_path]
+            default_keywords = app.get('Keyword', [])
+            default_link_text = app.get('InfoUrlText', None)
+            default_privacy_url = app.get('PrivacyUrl', None)
+            default_user_documentation = app.get('UserDocumentation', None)
             publisher = app.get('Publisher')
-            defaultInfoParams['publisher'] = publisher
+            default_info_params['publisher'] = publisher
             version = app.get('SoftwareVersion')
-            defaultInfoParams['software_version'] = version
-            releaseDate = app.get('ReleaseDate',None)
-            if releaseDate is not None:
-                self.output("Adding release date.",3)
-                defaultInfoParams["release_date"] = releaseDate
+            default_info_params['software_version'] = version
+            release_date = app.get('ReleaseDate', None)
+            if release_date is not None:
+                self.output("Adding release date.", 3)
+                default_info_params["release_date"] = release_date
             self.output("Defining parameters for any additional DisplayInfo objects.", 3)
             display_infos = []
-            defaultDisplayInfoConfigured = False
+            default_display_info_configured = False
             configuredLanguages = []
-            for i in configuredInfos:
-                iLanguage = i.get('Language','')
-                if iLanguage == '':
+            for i in configured_infos:
+                item_info_language = i.get('Language', '')
+                if item_info_language == '':
                     raise ProcessorError('Each display info must have Language specified.')
-                self.output(f"Processing DisplayInfo for {iLanguage}")
-                if configuredLanguages.__contains__(iLanguage):
+                self.output(f"Processing DisplayInfo for {item_info_language}")
+                if configuredLanguages.__contains__(item_info_language):
                     raise ProcessorError('DisplayInfo properties for any language can only be configured once.')
-                configuredLanguages.append(iLanguage)
-                if iLanguage == defaultLanguage:
-                    self.output(f"Configuring display properties for the default language ({defaultLanguage}).",2)
-                    defaultDisplayInfoConfigured = True
-                iParams = {"language":iLanguage}
-                iParams['publisher'] = publisher
-                iParams['software_version'] = version
-                if releaseDate is not None:
-                    iParams["release_date"] = releaseDate
-                if i.get('LocalizedDisplayName','') == '':
-                    iParams['title'] = defaultLocalizedDisplayName
+                configuredLanguages.append(item_info_language)
+                if item_info_language == default_language:
+                    self.output(f"Configuring display properties for the default language ({default_language}).", 2)
+                    default_display_info_configured = True
+                item_info_params = {"language":item_info_language}
+                item_info_params['publisher'] = publisher
+                item_info_params['software_version'] = version
+                if release_date is not None:
+                    item_info_params["release_date"] = release_date
+                if i.get('LocalizedDisplayName', '') == '':
+                    item_info_params['title'] = default_localized_display_name
                 else:
-                    iParams["title"] = i.get('LocalizedDisplayName')
+                    item_info_params["title"] = i.get('LocalizedDisplayName')
                 if i.__contains__('LocalizedDescription'):
-                    iParams["description"] = i.get('LocalizedDescription')
+                    item_info_params["description"] = i.get('LocalizedDescription')
                 else:
-                    iParams["description"] = defaultLocalizedDescription
-                if i.__contains__('IconFileUnixPath') and i.get('IconFileUnixPath','') != '':
-                    iParams["icon_reference"] = iconReferencesHash[i.get('IconFileUnixPath')]
-                elif defaultIconFileUnixPath is not None and defaultIconFileUnixPath != '':
-                    iParams["icon_reference"] = iconReferencesHash[defaultIconFileUnixPath]
+                    item_info_params["description"] = default_localized_description
+                if i.__contains__('IconFileUnixPath') and i.get('IconFileUnixPath', '') !=  '':
+                    item_info_params["icon_reference"] = icon_references_hash[i.get('IconFileUnixPath')]
+                elif default_icon_file_unix_path is not None and default_icon_file_unix_path !=  '':
+                    item_info_params["icon_reference"] = icon_references_hash[default_icon_file_unix_path]
                 if i.__contains__('UserDocumentation'):
-                    iParams["info_url"] = i.get('UserDocumentation')
+                    item_info_params["info_url"] = i.get('UserDocumentation')
                 else:
-                    iParams["info_url"] = defaultUserDocumentation
+                    item_info_params["info_url"] = default_user_documentation
                 if i.__contains__('LinkText'):
-                    iParams["info_url_text"] = i.get('LinkText')
+                    item_info_params["info_url_text"] = i.get('LinkText')
                 else:
-                    iParams["info_url_text"] = defaultLinkText
+                    item_info_params["info_url_text"] = default_link_text
                 if i.__contains__('PrivacyUrl'):
-                    iParams["privacy_url"] = i.get('PrivacyUrl')
+                    item_info_params["privacy_url"] = i.get('PrivacyUrl')
                 else:
-                    iParams["privacy_url"] = defaultPrivacyUrl
+                    item_info_params["privacy_url"] = default_privacy_url
                 if i.__contains__('UserCategories'):
-                    infoUserCategories =  i.get('UserCategories',[])
+                    infoUserCategories =  i.get('UserCategories', [])
                 else:
-                    infoUserCategories = app.get('UserCategories',[])
+                    infoUserCategories = app.get('UserCategories', [])
                 iUserCategories = []
                 for c in infoUserCategories:
-                    iUserCategories.append(userCategories[c])
+                    iUserCategories.append(user_categories[c])
                 if len(iUserCategories) > 0:
-                    iParams["user_categories_node"] = new_user_categories_node(user_category_unique_ids=userCategories)
+                    item_info_params["user_categories_node"] = new_user_categories_node(user_category_unique_ids = user_categories)
                 if i.__contains__('Keyword'):
-                    iParams["tags"] = i.get('Keyword')
+                    item_info_params["tags"] = i.get('Keyword')
                 else:
-                    iParams["tags"] = defaultKeywords
+                    item_info_params["tags"] = default_keywords
                 self.output(f"Done gathering display info parameters. Generating node.", 3)
-                display_infos.append(new_display_info(**iParams))
-            if defaultDisplayInfoConfigured == False:
-                self.output("Default DisplayInfo was not defined. Creating it now.",2)
-                display_infos.append(new_display_info(**defaultInfoParams))
-            displayInfoNode = new_display_info_node(display_infos=display_infos,default_language=defaultLanguage)
-            application.append_child_node([displayInfoNode])
+                display_infos.append(new_display_info(**item_info_params))
+            if default_display_info_configured == False:
+                self.output("Default DisplayInfo was not defined. Creating it now.", 2)
+                display_infos.append(new_display_info(**default_info_params))
+            display_info_node = new_display_info_node(display_infos = display_infos, default_language = default_language)
+            application.append_child_node([display_info_node])
             # Append deployment type references
             self.output("Adding deployment type references", 2)
             deployment_type_references = []
             for deployment_type in dt_list:
                 self.output('Getting reference', 3)
-                deployment_type_references.append(get_deployment_type_reference(deployment_type=deployment_type))
-            deployment_types_node = XmlNodeAsDict(NodeName='DeploymentTypes',ChildNodes=deployment_type_references)                
+                deployment_type_references.append(get_deployment_type_reference(deployment_type = deployment_type))
+            deployment_types_node = XmlNodeAsDict(NodeName = 'DeploymentTypes', ChildNodes = deployment_type_references)                
             application.append_child_node([deployment_types_node])
-            self.output("Adding title",2)
-            application.append_child_node([XmlNodeAsDict(NodeName='Title',Attributes=[new_resource_id_attribute()],NodeInnerText=appName)])
-            if len(defaultLocalizedDescription or []) > 0:
-                self.output("Adding description",2)
-                application.append_child_node([XmlNodeAsDict(NodeName='Description',Attributes=[new_resource_id_attribute()],NodeInnerText=defaultLocalizedDescription)])
+            self.output("Adding title", 2)
+            application.append_child_node([XmlNodeAsDict(NodeName = 'Title', Attributes = [new_resource_id_attribute()], NodeInnerText = app_name)])
+            if len(default_localized_description or []) > 0:
+                self.output("Adding description", 2)
+                application.append_child_node([XmlNodeAsDict(NodeName = 'Description', Attributes = [new_resource_id_attribute()], NodeInnerText = default_localized_description)])
             if len(publisher or []) > 0:
-                self.output("Adding publisher",2)
-                application.append_child_node([XmlNodeAsDict(NodeName='Publisher',Attributes=[new_resource_id_attribute()],NodeInnerText=publisher)])
+                self.output("Adding publisher", 2)
+                application.append_child_node([XmlNodeAsDict(NodeName = 'Publisher', Attributes = [new_resource_id_attribute()], NodeInnerText = publisher)])
             if len(app.get("SoftwareVersion") or []) > 0:
-                self.output(f"Adding software version {app.get('SoftwareVersion')}",2)
-                application.append_child_node([XmlNodeAsDict(NodeName='SoftwareVersion',Attributes=[new_resource_id_attribute()],NodeInnerText=app.get("SoftwareVersion"))])
-            if len(releaseDate or []) > 0:
-                self.output("Adding release date",2)
-                application.append_child_node([XmlNodeAsDict(NodeName='ReleaseDate',Attributes=[new_resource_id_attribute()],NodeInnerText=releaseDate)])
-            optionalReference = app.get('OptionalReference') or ''
-            if len(optionalReference.strip()) > 0:
-                self.output(f"Adding optional reference",2)
-                application.append_child_node([XmlNodeAsDict(NodeName='CustomId',Attributes=[new_resource_id_attribute()],NodeInnerText=str(app['OptionalReference']).strip())])
-            self.output("Adding AutoInstall setting",2)
-            application.append_child_node([XmlNodeAsDict(NodeName='AutoInstall',NodeInnerText=str(app.get('AutoInstall',False)).lower())])
-            if len(app.get('Owners',[])) > 0:
-                self.output("Adding owners",2)
-                application.append_child_node([new_owners_node(user_ids=app['Owners'])])
-            if len(app.get('SupportContacts',[])) > 0:
-                self.output("Adding contacts",2)
-                application.append_child_node([new_contacts_node(user_ids=app['SupportContacts'])])
-            if bool(app.get('SendToProtectedDP',False)):
-                self.output("Allowing send to protected dp",3)
-                application.append_child_node([XmlNodeAsDict(NodeName='SendToProtectedDP',NodeInnerText='true')])
+                self.output(f"Adding software version {app.get('SoftwareVersion')}", 2)
+                application.append_child_node([XmlNodeAsDict(NodeName = 'SoftwareVersion', Attributes = [new_resource_id_attribute()], NodeInnerText = app.get("SoftwareVersion"))])
+            if len(release_date or []) > 0:
+                self.output("Adding release date", 2)
+                application.append_child_node([XmlNodeAsDict(NodeName = 'ReleaseDate', Attributes = [new_resource_id_attribute()], NodeInnerText = release_date)])
+            optional_reference = app.get('OptionalReference') or ''
+            if len(optional_reference.strip()) > 0:
+                self.output(f"Adding optional reference", 2)
+                application.append_child_node([XmlNodeAsDict(NodeName = 'CustomId', Attributes = [new_resource_id_attribute()], NodeInnerText = str(app['OptionalReference']).strip())])
+            self.output("Adding AutoInstall setting", 2)
+            application.append_child_node([XmlNodeAsDict(NodeName = 'AutoInstall', NodeInnerText = str(app.get('AutoInstall', False)).lower())])
+            if len(app.get('Owners', [])) > 0:
+                self.output("Adding owners", 2)
+                application.append_child_node([new_owners_node(user_ids = app['Owners'])])
+            if len(app.get('SupportContacts', [])) > 0:
+                self.output("Adding contacts", 2)
+                application.append_child_node([new_contacts_node(user_ids = app['SupportContacts'])])
+            if bool(app.get('SendToProtectedDP', False)):
+                self.output("Allowing send to protected dp", 3)
+                application.append_child_node([XmlNodeAsDict(NodeName = 'SendToProtectedDP', NodeInnerText = 'true')])
             self.output("Creating AppMgmtDigest.", 2)
-            appMgmtDigest_root = XmlNodeAsDict(NodeName='AppMgmtDigest',Attributes=[XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('AppMgmtDigest')['ns'])],nsmap=get_nsmap("Default",include_xsi=True)['nsmap'])
+            app_mgmt_digest_root = XmlNodeAsDict(NodeName = 'AppMgmtDigest', Attributes = [XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap('AppMgmtDigest')['ns'])], nsmap = get_nsmap("Default", include_xsi = True)['nsmap'])
             self.output("Adding application node", 3)
-            appMgmtDigest_root.append_child_node([application])
+            app_mgmt_digest_root.append_child_node([application])
             if len(dt_list) > 0:
                 self.output('Adding deployment types.', 3)
-                appMgmtDigest_root.append_child_node(dt_list)
-            if len(allResources) > 0:
+                app_mgmt_digest_root.append_child_node(dt_list)
+            if len(all_resources) > 0:
                 self.output('Adding resources node.', 3)
-                resources_node = XmlNodeAsDict(NodeName='Resources',ChildNodes=allResources)
-                appMgmtDigest_root.append_child_node([resources_node])
+                resources_node = XmlNodeAsDict(NodeName = 'Resources', ChildNodes = all_resources)
+                app_mgmt_digest_root.append_child_node([resources_node])
             self.output("Setting mcm_application variable", 3)
-            sdm_package_xml_string = appMgmtDigest_root.to_xml_string(xml_declaration=True,encoding='utf-16',pretty_print=True)
+            sdm_package_xml_string = app_mgmt_digest_root.to_xml_string(xml_declaration = True, encoding = 'utf-16', pretty_print = True)
             self.output('Setting SDMPackageXML variable', 2)
             self.env["SDMPackageXML"] = sdm_package_xml_string
 
