@@ -49,19 +49,21 @@ class McmScopeIdGetter(Processor):
     
     __doc__ = description
 
-    def convert_site_id_to_scope_id(self,siteId:str) -> str:
+    def convert_site_id_to_scope_id(self, site_id: str) -> str:
         """Convert a SiteID string to a scope id"""
-        siteIdGuid = siteId.replace('{','').replace('}','')
-        scopeId = f"ScopeId_{siteIdGuid}"
+        site_id_guid = site_id.replace('{','').replace('}','')
+        scopeId = f"ScopeId_{site_id_guid}"
         return scopeId
 
-    def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+    def get_mcm_ntlm_auth(
+            self, keychain_service_name: str, 
+            keychain_username: str) -> HttpNtlmAuth:
         """Get the credential from keychain using the supplied
         parameters and return an HttpNtlmAuth object from the retrieved
         details
         """
-        password = keyring.get_password(keychainServiceName,keychainUsername)
-        return HttpNtlmAuth(keychainUsername,password)
+        password = keyring.get_password(keychain_service_name,keychain_username)
+        return HttpNtlmAuth(keychain_username,password)
 
     def main(self):
         """McmScopeIdGetter Main Method"""
@@ -75,22 +77,31 @@ class McmScopeIdGetter(Processor):
                 "Content-Type": "application/json"
             }
             self.output("Checking supplied parameters",3)
-            keychainServiceName = self.env.get("keychain_password_service", self.input_variables["keychain_password_service"]["default"])
-            keychainUsername = self.env.get("keychain_password_username",self.env.get("MCMAPI_USERNAME",''))
+            keychain_service_name = self.env.get(
+                "keychain_password_service", 
+                self.input_variables["keychain_password_service"]["default"]
+                )
+            keychain_username = self.env.get(
+                "keychain_password_username",
+                self.env.get("MCMAPI_USERNAME",'')
+                )
             fqdn = self.env.get("mcm_site_server_fqdn", '')
 
             if (fqdn == None or fqdn == ''):
                 raise ValueError("mcm_site_server_fqdn cannot be blank")
 
-            if (keychainServiceName == None or keychainUsername == ''):
+            if (keychain_service_name == None or keychain_username == ''):
                 raise ValueError("keychain_password_service cannot be blank")
 
-            if (keychainUsername == None or keychainUsername == ''):
+            if (keychain_username == None or keychain_username == ''):
                 raise ValueError("keychain_password_username cannot be blank")
 
             self.output(f"Attempting to get SiteInfo from {fqdn}",2)
-            url = f"https://{fqdn}/AdminService/wmi/SMS_Identification.GetSiteID"
-            ntlm = self.get_mcm_ntlm_auth(keychainServiceName=keychainServiceName,keychainUsername=keychainUsername)
+            url = (
+                f"https://{fqdn}/AdminService/wmi/SMS_Identification"
+                ".GetSiteID"
+            )
+            ntlm = self.get_mcm_ntlm_auth(keychain_service_name=keychain_service_name,keychain_username=keychain_username)
             response = requests.request(
                 method='GET',
                 url=url,
@@ -99,10 +110,15 @@ class McmScopeIdGetter(Processor):
                 timeout=10,
                 verify=False
             )
-            jsonResponse = response.json()
-            siteId = jsonResponse.get('SiteID')
-            self.output(f"Converting {siteId} to scope id and setting it as mcm_scope_id",2)
-            self.env["mcm_scope_id"] = self.convert_site_id_to_scope_id(siteId=siteId)
+            json_response = response.json()
+            site_id = json_response.get('SiteID')
+            self.output(
+                f"Converting {site_id} to scope id and setting it "
+                "as mcm_scope_id",
+                2)
+            self.env["mcm_scope_id"] = self.convert_site_id_to_scope_id(
+                site_id = site_id
+                )
 
         except Exception as e:
             self.output("Failed to retrieve the scope id for the MCM site.")

@@ -64,19 +64,22 @@ class McmObjectMover(Processor):
     }
 
     __doc__ = description
-    def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+    def get_mcm_ntlm_auth(
+            self, keychain_service_name: str, keychain_username: str
+            ) -> HttpNtlmAuth:
         """Get the credential from keychain using the supplied
         parameters and return an HttpNtlmAuth object from the retrieved
         details
         """
 
-        password = keyring.get_password(keychainServiceName,keychainUsername)
-        return HttpNtlmAuth(keychainUsername,password)
+        password = keyring.get_password(
+            keychain_service_name,keychain_username)
+        return HttpNtlmAuth(keychain_username,password)
     
     def get_mcm_object_type_maps() -> dict:
         """Return a dict of mcm object names"""
 
-    def get_mcm_object_type_id(self,object_key) -> int:
+    def get_mcm_object_type_id(self, object_key) -> int:
         """Return the unique id that MCM assigns to an object id for
         use in security scope assignment by querying the
         SMS_SecuredCategoryMembership for the object
@@ -124,7 +127,7 @@ class McmObjectMover(Processor):
             "by_lower_type_and_path": nodes_by_lower_type_and_path
         }
 
-    def uses_revisions(self,object_class:str,dynamic:bool=False) -> bool:
+    def uses_revisions(self, object_class: str, dynamic: bool = False) -> bool:
         """Return True if the object uses revisions. This determines
         if the object type should be suffixed with 'Latest'
         """
@@ -142,19 +145,19 @@ class McmObjectMover(Processor):
             "Content-Type": "application/json"
         }
         self.output("Checking supplied parameters",3)
-        keychainServiceName = self.env.get("keychain_password_service", self.input_variables["keychain_password_service"]["default"])
-        keychainUsername = self.env.get("keychain_password_username",self.env.get("MCMAPI_USERNAME",''))
+        keychain_service_name = self.env.get("keychain_password_service", self.input_variables["keychain_password_service"]["default"])
+        keychain_username = self.env.get("keychain_password_username",self.env.get("MCMAPI_USERNAME",''))
         self.fqdn = self.env.get("mcm_site_server_fqdn", '')
         if (self.fqdn == None or self.fqdn == ''):
             raise ProcessorError("mcm_site_server_fqdn cannot be blank")
-        if (keychainServiceName == None or keychainUsername == ''):
+        if (keychain_service_name == None or keychain_username == ''):
             raise ProcessorError("keychain_password_service cannot be blank")
-        if (keychainUsername == None or keychainUsername == ''):
+        if (keychain_username == None or keychain_username == ''):
             raise ProcessorError("keychain_password_username cannot be blank")
         self.output("Generating NTLM Auth object.",3)
         self.ntlm = self.get_mcm_ntlm_auth(
-            keychainServiceName=keychainServiceName,
-            keychainUsername=keychainUsername
+            keychain_service_name=keychain_service_name,
+            keychain_username=keychain_username
         )
 
         try:
@@ -202,15 +205,29 @@ class McmObjectMover(Processor):
             if target_container_node_id == current_container_node_id:
                 self.output("Object is already a member of the target folder. Nothing to do.", 2)
                 return
-            self.output("The object is not a member of the target folder. Constructing request parameters", 3)
-            url = f"https://{self.fqdn}/AdminService/wmi/SMS_ObjectContainerItem.MoveMembers"
+            self.output(
+                "The object is not a member of the target folder. "
+                "Constructing request parameters",
+                3
+                )
+            url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                "SMS_ObjectContainerItem.MoveMembers"
+            )
             body = {
                 "InstanceKeys": [object_key],
                 "ContainerNodeID": current_container_node_id,
                 "TargetContainerNodeID": target_container_node_id,
-                "ObjectType": folder_map['by_lower_type_and_path'].get(target_object_path_string,{}).get('ObjectType',folder_map['by_lower_type_and_path'].get(current_object_path_string,{}).get('ObjectType'))
+                "ObjectType": folder_map['by_lower_type_and_path']\
+                    .get(target_object_path_string,{})\
+                    .get(
+                        'ObjectType',
+                        folder_map['by_lower_type_and_path']\
+                            .get(current_object_path_string,{})\
+                            .get('ObjectType')
+                        )
             }
-            self.output(f"Request parameters: {json.dumps(body)}",3)
+            self.output(f"Request parameters: {json.dumps(body)}",4)
             move_response = requests.request(
                 method='POST',
                 auth=self.ntlm,
@@ -220,18 +237,7 @@ class McmObjectMover(Processor):
                 verify=False
             )
             self.output(f"Result: {move_response}", 3)
-            
-            # Identify Current ContainerNodeID
-                # Determine if object type uses revisions
-                # Get actual target ci_id (TypeLatest or just Type)
-                # Get the current folder string ObjectPath
-            # If target.lower() != current.lower():
-                # Identify Target ContainerNodeID
-                    # Get map (id) by path.lower()
-                # Call SMS_ObjectContainerNode.MoveFolders(ContainerNodeIDs, TargetContainerNodeID)
-                
-            pass
-    
+
         except Exception as e:
             raise e
 
