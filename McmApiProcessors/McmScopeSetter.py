@@ -69,10 +69,17 @@ class McmScopeSetter(Processor):
     __doc__ = description
 
     def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+        """Get the credential from keychain using the supplied
+        parameters and return an HttpNtlmAuth object from the retrieved
+        details
+        """
         password = keyring.get_password(keychainServiceName,keychainUsername)
         return HttpNtlmAuth(keychainUsername,password)
 
     def get_mcm_security_scopes(self) -> dict:
+        """Connect to MCM and retrieve an object to enable mapping
+        security scope name by id and id by security scope name
+        """
         self.output("Retrieving possible security scopes", 3)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_SecuredCategory"
         sms_secured_categories = requests.request(
@@ -89,7 +96,10 @@ class McmScopeSetter(Processor):
         }
 
     def get_mcm_object_type_id(self,object_key:str) -> int:
-        """Return the unique id that MCM assigns to an object id for use in security scope assignment by querying the SMS_SecuredCategoryMembership for the object."""
+        """Return the unique id that MCM assigns to an object id for
+        use in security scope assignment by querying the
+        SMS_SecuredCategoryMembership for the object
+        """
         self.output(f"Getting ObjectTypeID for {object_key}")
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_SecuredCategoryMembership?$filter=startsWith(ObjectKey,'{self.object_key}') eq true"
         sms_secured_category_membership = requests.request(
@@ -105,6 +115,7 @@ class McmScopeSetter(Processor):
             raise ProcessorError('Could not locate the ObjectTypeID for the given ObjectKey')
 
     def main(self):
+        """McmScopeSetter Main Method"""
         self.output("Generating headers.",3)
         self.headers = {
             "Accept": "application/json",

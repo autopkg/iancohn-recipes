@@ -37,30 +37,48 @@ from autopkglib import Processor, ProcessorError
 
 # Helper functions
 def try_cast(type_name,value,default=None):
+    """Cast the supplied value as the indicated type. If it cannot
+    cast, return a default value
+    """
     try:
         return type_name(value)
     except:
         return default
 
 def can_cast(type_name,value) -> bool:
+    """Return True if the supplied value can cast as the supplied
+    type name
+    """
     return try_cast(type_name,value) is not None
 
 def get_int32_from_uuid(uuid:uuid.UUID):
+    """Deterministically create an int from a given uuid"""
     uuid_hash = hash(uuid)
     uuid_int = abs(c_int32(uuid_hash).value)
     return uuid_int
 
 def get_identifier_from_string(string:str):
+    """Return the simple uuid/guid string from an MCM identifier
+    in '[Object Type]_[Guid] format'
+    """
     return string.split('_',1)[1]
 
 def get_relative_windows_path(pathname:str,unix_root:str):
+    """Convert a unix path to a relative path compliant with
+    Windows operating systems. Calculate the path relative to the
+    supplied root unix path
+    """
     return pathname.replace(unix_root,'',1).replace('/','\\')
 
 def convert_site_id_to_scope_id(site_id: str) -> str:
+    """Convert a SiteID string to a scope id"""
     site_id_clean = site_id.replace('{', '').replace('}', '')
     return f"ScopeId_{site_id_clean}"
 
 def get_nsmap(namespace_name:str,include_xsi:bool=False)->dict:
+    """Create a namespace map object for use in etree.Element
+    objects
+    """
     class McmXmlNamespace(Enum):
         AppMgmtDigest = 1
         Rule = 2
@@ -98,18 +116,21 @@ def get_nsmap(namespace_name:str,include_xsi:bool=False)->dict:
 
 # Enums
 class ProgramVisibility(Enum):
+    """Valid ProgramVisibility values"""
     Normal    = "Normal"
     Minimized = "Minimized"
     Maximized = "Maximized"
     Hidden    = "Hidden"
 
 class RebootBehavior(Enum):
+    """Valid RebootBehavior values"""
     BasedOnExitCode = "BasedOnExitCode"
     NoAction        = "NoAction"
     ProgramReboot   = "ProgramReboot"
     ForceReboot     = "ForceReboot"
 
 class RequirementRuleDataType(Enum):
+    """Valid RequirementRuleDataType values"""
     Base64                       = "Base64"
     Boolean                      = "Boolean"
     BooleanArray                 = "BooleanArray"
@@ -136,16 +157,19 @@ class RequirementRuleDataType(Enum):
     Xml                          = "Xml"
 
 class ArgumentType(Enum):
+    """Valid ArgumentType values"""
     String = 'String'
     Boolean = 'Boolean'
     Int32 = 'Int32'
     Int32Array = 'Int32[]'
 
 class RuleEvaluationMethod(Enum):
+    """Valid Method values for Rule objects"""
     Count = "Count"
     Value = "Value"
 
 class DeploymentTechnology(Enum):
+    """Valid DeploymentTechnology values"""
     MSI = "MSI"
     Windows8App = "Windows8App"
     #Deeplink = 2
@@ -165,6 +189,7 @@ class DeploymentTechnology(Enum):
     #TaskSequence = "TaskSequence"
 
 class ExecutionContext(Enum):
+    """Valid ExecutionContext values"""
     Any = "Any"
     User = "User"
     System = "System"
@@ -173,12 +198,17 @@ BehaviorTypeToContext = {
     "InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser": "Any",
     "InstallForUser": "User"
 }
+
 class ActionProvider(Enum):
+    """Valid ActionProvider values"""
     Local = "Local"
     Script = "Script"
     TaskSequence = "TaskSequence"
 
 class Operator(Enum):
+    """Valid Operator values. Not all operators below are valid in all
+    configuration contexts
+    """
     Equals = "Equals"
     NotEquals = "NotEquals"
     GreaterThan = "GreaterThan"
@@ -204,6 +234,7 @@ class Operator(Enum):
     Or = "Or"
 
 class SettingSourceType(Enum):
+    """Valid SettingSourceType values"""
     File = "File"
     Folder = "Folder"
     Registry = "Registry"
@@ -211,6 +242,7 @@ class SettingSourceType(Enum):
     MSI = "MSI"
 
 class SettingPropertyPath(Enum):
+    """Valid SettingPropertyPath values"""
     RegistryKeyExists = "RegistryKeyExists"
     Size = "Size"
     ProductVersion = "ProductVersion"
@@ -218,22 +250,26 @@ class SettingPropertyPath(Enum):
     DateModified = "DateModified"
 
 class ContentHandlingMode(Enum):
+    """Valid ContentHandlingMode values"""
     DoNothing = "DoNothing"
     Download = "Download"
     DownloadContentForStreaming = "DownloadContentForStreaming"
 
 class DeploymentTypeFilterType(Enum):
+    """Valid DeploymentTypeFilterType values"""
     Equals = "Equal"
     StartsWith = "StartsWith"
     Contains = "Contains"
 
 class ActionType(Enum):
+    """Valid ActionType values"""
     DetectAction = "DetectAction"
     InstallAction = "InstallAction"
     UninstallAction = "UninstallAction"
     RepairAction = "RepairAction"
 
 class DetectionType(Enum):
+    """Valid DetectionType values"""
     File                = "File"
     Folder              = "Folder"
     RegistryKey         = "RegistryKey"
@@ -243,6 +279,7 @@ class DetectionType(Enum):
     CustomScript        = "CustomScript"
 
 PropertyPathDataType = {
+    """Map PropertyPaths to valid DataType values"""
     "DateCreated": "DateTime",
     "DateModified": "DateTime",
     "ProductVersion": "Version",
@@ -252,6 +289,7 @@ PropertyPathDataType = {
 
 # Root
 class McmIdentifier(dict):
+    """A class used to create valid identifiers for use in MCM"""
     def __init__(self,guid:str=None,resource_id:int=None):
         if guid is None:
             guid = uuid.uuid4()
@@ -263,6 +301,7 @@ class McmIdentifier(dict):
         else:
             self.resource_id = resource_id
     def get_logical_name(self,object_type_name:str=None,object:any=None):
+        """Return a logical name identifier given an object type"""
         if (object_type_name is None or object_type_name == ''):
             if object is None:
                 raise ProcessorError('object_type_name or object must be supplied')
@@ -273,9 +312,11 @@ class McmIdentifier(dict):
         return f"{object_type_name}_{self.guid}"
      
     def get_resource_id(self):
+        """Return the deterministic resource id of the object"""
         return f"Res_{self.ResourceId.__str__()}"
 
 class XmlAttributeAsDict(dict):
+    """Allow XML attributes to be represented as dict objects"""
     def __init__(self,Name:str,Value:any):
         super().__init__({
             'Name': Name,
@@ -283,18 +324,16 @@ class XmlAttributeAsDict(dict):
         })
 
 class XmlNodeAsDict(dict):
+    """Stub class to allow XmlNodeAsDict to nest inside of itself"""
     pass
 
 class XmlNodeAsDict(dict):
+    """Represent an etree.Element object as a dict"""
     instance_map = {}
     instance_map_by_external_id = {}
     def __init__(self,NodeName:str,Attributes:list[XmlAttributeAsDict]=[],ChildNodes:list[XmlNodeAsDict]=None,
                  NodeInnerText:str=None,nsmap:dict=None,xml_declaration:bool=False,external_reference_id:int=None,group_ids:list[int]=[]):
         super().__init__({})
-        if (external_reference_id or 0) > 0:
-            pass
-        if NodeName == 'RegistryKey':
-            pass
         self['NodeName'] = NodeName
         if Attributes is not None and len(Attributes) > 0:
             self['Attributes'] = Attributes
@@ -311,6 +350,9 @@ class XmlNodeAsDict(dict):
             XmlNodeAsDict.instance_map_by_external_id[f"{external_reference_id}"] = self
     @classmethod
     def convert_element_to_dict(cls,element:etree.Element,namespace_mode:str='PersistAsAttribute',parent_namespace:dict=None,is_root:bool=True)->XmlNodeAsDict:
+        """Convert an etree.Element object to XmlNodeAsDict class. Used
+        to import existing XML objects
+        """
         class NamespaceMode(Enum):
             Maintain = "Maintain"
             StripRecursive = "StripRecursive"
@@ -338,10 +380,15 @@ class XmlNodeAsDict(dict):
         return newXmlNodeAsDict
     @classmethod
     def from_xml_string(cls,xml_string:str,namespace_mode:str)->XmlNodeAsDict:
+        """Convert an XML string into an XmlNodeAsDict instance"""
         xml = etree.XML(xml_string)
         return XmlNodeAsDict.convert_element_to_dict(element=xml,namespace_mode=namespace_mode)
     @classmethod
     def from_dict(cls, data):
+        """Convert an existing dict to an XmlNodeAsDict instance.
+        Useful if importing a dict which has been saved to a file as
+        json
+        """
         instance = cls(data)
         if 'ChildNodes' in instance and isinstance(instance('ChildNodes',list)):
             instance['ChildNodes'] = [
@@ -350,19 +397,32 @@ class XmlNodeAsDict(dict):
         return instance
     @classmethod
     def from_json(cls, json_string):
+        """Convert an XmlNodeAsDict object which has been stored as
+        JSON back to an XmlNodeAsDict instance
+        """
         data = json.loads(json_string)
         return cls.from_dict(data)
     def append_child_node(self,ChildNodes:list[XmlNodeAsDict]):
+        """Append a list of XmlNodeAsDict instances to the ChildNodes
+        of the instance on which this method is called
+        """
         for n in ChildNodes:
             self['ChildNodes'].append(n)
     def set_node_inner_text(self,NodeInnerText:str):
+        """Overwrite the existing NodeInnerText with the supplied
+        string
+        """
         self['NodeInnerText'] = NodeInnerText
     def has_children(self):
+        """Return True if the XmlNodeAsDict instance's ChildNodes
+        contains one or more XmlNodeAsDict instances
+        """
         if len(self.get('ChildNodes',[])) == 0:
             return False
         else:
             return True
     def convert_to_xml(self)->etree.Element:
+        """Convert the current instance to an etree.Element object"""
         params = {}
         if isinstance(self.get('nsmap',None), dict):
             default_ns = self['nsmap'].get(None) if self['nsmap'] else None
@@ -386,20 +446,27 @@ class XmlNodeAsDict(dict):
             node.append(child)
         return node
     def to_xml_string(self,xml_declaration:bool=None,encoding:str='utf-16',pretty_print:bool=True)->str:
+        """Convert the current instance to a raw xml string"""
         xml = self.convert_to_xml()
         include_xml_declaration = xml_declaration if xml_declaration is not None else self.get('xml_declaration',False)
         xml_string = etree.tostring(xml,pretty_print=pretty_print,xml_declaration=include_xml_declaration,encoding=encoding).decode(encoding)
         return xml_string
     def get_attribute_value(self,attribute_name:str)->str:
+        """Return the Value property for the XmlAttributeAsDict
+        instance attached to this instance for the given attribute
+        name
+        """
         if (attribute_name,'') == '':
             raise ValueError("Must specify an attribute name to retrieve.")
         result = next((x.get('Value',None) for x in self.get('Attributes',[]) if x.get('Name','') == attribute_name), None)
         return result
     @property
     def LogicalName(self):
+        """Return the LogicalName attribute value for this instance"""
         return self.get_attribute_value(attribute_name='LogicalName')
     @property
     def ResourceId(self):
+        """Return the ResourceId attribute value for this instance"""
         return self.get_attribute_value(attribute_name='ResourceId')
     @classmethod
     def from_xml_string_with_tracking(cls,xml_string:str):
@@ -426,7 +493,9 @@ class XmlNodeAsDict(dict):
         return cls._convert_element_with_tracking(root, explicit_ns_map)
     @classmethod
     def _convert_element_with_tracking(cls,element:etree.Element,explicit_ns_map:dict):
-        """Convert element, preserving explicit namespace declarations"""
+        """Convert element, preserving explicit namespace
+        declarations
+        """
         element_id = id(element)
         params = {
             "NodeName": etree.QName(element).localname,
@@ -452,14 +521,21 @@ class XmlNodeAsDict(dict):
             new_node.append_child_node([child_node])
         return new_node
     def find_children_by_name(self,node_name:str) -> list:
+        """Return direct children of this XmlNodeAsDict instance where
+        the tag/node name matches the given string
+        """
         return [child for child in self.get('ChildNodes',[]) if child.get('NodeName') == node_name]
 
 def new_resource_id_attribute() -> XmlAttributeAsDict:
+    """Utility function for quicker creation of a ResourceId
+    XmlAttributeAsDict object
+    """
     attr = XmlAttributeAsDict(Name="ResourceId",Value=f"Res_{McmIdentifier().resource_id}")
     return attr
 
 # Content
 def new_content_file(pathname:str,unix_root:str) -> XmlNodeAsDict:
+    """Return an XmlNodeAsDict object for the supplied file path"""
     relative_windows_path = get_relative_windows_path(pathname,unix_root)
     if pathname.endswith("/"):
         size = 0
@@ -468,9 +544,12 @@ def new_content_file(pathname:str,unix_root:str) -> XmlNodeAsDict:
     return XmlNodeAsDict(NodeName="File",Attributes=[XmlAttributeAsDict(Name='Name',Value=relative_windows_path),
                                                       XmlAttributeAsDict(Name='Size',Value=size)])
 
-def new_content_importer(content_location:str,content_location_local:str,content_id:str=None,enable_peer_cache:bool=True,
+def new_content_importer(
+        content_location:str,content_location_local:str,
+        content_id:str=None,enable_peer_cache:bool=True,
         fast_network_action:ContentHandlingMode=ContentHandlingMode['Download'],
         slow_network_action:ContentHandlingMode=ContentHandlingMode['DoNothing']) -> XmlNodeAsDict:
+    """Create a new Content node as an XmlNodeAsDict object"""
     if content_id is None or content_id == '':
             content_id = f'Content_{uuid.uuid4().__str__()}'
     importer = XmlNodeAsDict(NodeName='Content',Attributes=[XmlAttributeAsDict('ContentId',(content_id)),XmlAttributeAsDict(Name='Version',Value='1')],external_reference_id=id(content_location_local))
@@ -508,6 +587,9 @@ def new_content_importer(content_location:str,content_location_local:str,content
     return importer
 
 def get_content_reference(content_importer:XmlNodeAsDict) -> XmlNodeAsDict:
+    """Create an XmlNodeAsDict inistance that references the supplied
+    content importer node
+    """
     attributes = [
         XmlAttributeAsDict(Name='ContentId',Value=content_importer.get_attribute_value(attribute_name='ContentId')),
         XmlAttributeAsDict(Name='Version',Value=content_importer.get_attribute_value(attribute_name='Version'))
@@ -520,6 +602,9 @@ def get_content_reference(content_importer:XmlNodeAsDict) -> XmlNodeAsDict:
     return reference
 
 def new_icon_resource(local_path:str,id_length:int=41,b64_encoding:str='utf-8',optimize:bool=True) -> XmlNodeAsDict:
+    """Inspect an icon .png file, encode the binary data, and return
+    the the information as an XmlNodeAsDict instance
+    """
     if not local_path.lower().endswith('.png'):
         raise ProcessorError("Only PNG files are supported for icons.")
     with Image.open(local_path) as old:
@@ -536,12 +621,16 @@ def new_icon_resource(local_path:str,id_length:int=41,b64_encoding:str='utf-8',o
     return icon_resource
 
 def get_icon_reference(icon_resource:XmlNodeAsDict) -> XmlNodeAsDict:
+    """Create a XmlNodeAsDict instance which references the supplied
+    icon node
+    """
     icon_id = icon_resource.get_attribute_value(attribute_name='Id')
     icon_reference = XmlNodeAsDict(NodeName='Icon',Attributes=[XmlAttributeAsDict(Name='Id',Value=icon_id)])
     return icon_reference
 
 # User nodes
 def new_user(user_id:str) -> XmlNodeAsDict:
+    """Create a user XmlNodeAsDict instance"""
     attributes = [
         XmlAttributeAsDict(Name='Qualifier',Value='LogonName'),
         XmlAttributeAsDict(Name='Id',Value=user_id)
@@ -550,6 +639,7 @@ def new_user(user_id:str) -> XmlNodeAsDict:
     return user
 
 def new_owners_node(user_ids:list=[]) -> XmlNodeAsDict:
+    """Create an owner XmlNodeAsDict instance"""
     user_nodes = []
     for u in user_ids:
         user_nodes.append(new_user(u))
@@ -557,6 +647,9 @@ def new_owners_node(user_ids:list=[]) -> XmlNodeAsDict:
     return owners_node
 
 def new_contacts_node(user_ids:list=[]) -> XmlNodeAsDict:
+    """Create a contacts XmlNodeAsDict instance from a list of user
+    nodes
+    """
     user_nodes = []
     for u in user_ids:
         user_nodes.append(new_user(u))
@@ -564,6 +657,7 @@ def new_contacts_node(user_ids:list=[]) -> XmlNodeAsDict:
     return contacts_node
 # Requirements & Detection
 def new_operator(operator:str) -> XmlNodeAsDict:
+    """Create an operator XmlNodeAsDict object"""
     try:
         oprtr = Operator(operator)
     except:
@@ -573,6 +667,7 @@ def new_operator(operator:str) -> XmlNodeAsDict:
     return node
 
 def new_annotation(display_name:str='',description='',include_xmlns:bool=False) -> XmlNodeAsDict:
+    """Create an annotation XmlNodeAsDict object"""
     display_name_node = XmlNodeAsDict(NodeName='DisplayName',Attributes=[XmlAttributeAsDict(Name='Text',Value=display_name)])
     description_node = XmlNodeAsDict(NodeName='Description',Attributes=[XmlAttributeAsDict(Name='Text',Value=description)])
     annotation = XmlNodeAsDict(NodeName='Annotation',ChildNodes=[display_name_node,description_node])
@@ -581,6 +676,7 @@ def new_annotation(display_name:str='',description='',include_xmlns:bool=False) 
     return annotation
 
 def new_constant_value(value:any,data_type:str):
+    """Create a constant value XmlNodeAsDict object"""
     try:
         if list(f.value for f in RequirementRuleDataType).__contains__(data_type):
             requirement_rule_data_type = RequirementRuleDataType(data_type)
@@ -597,6 +693,7 @@ def new_constant_value(value:any,data_type:str):
     return constant_value
 
 def new_constant_value_list(constant_values:list) -> XmlNodeAsDict:
+    """Create a constant value list XmlNodeAsDict object"""
     if len(constant_values or []) < 2:
         raise ValueError('At least 2 ConstantValue objects are required.')
     unique_data_types = []
@@ -616,6 +713,7 @@ def new_constant_value_list(constant_values:list) -> XmlNodeAsDict:
     return XmlNodeAsDict(NodeName='ConstantValueList',Attributes=attributes,ChildNodes=constant_values)
 
 def new_file_setting(path:str,filter:str,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='File'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+    """Create a new file based detection setting"""
     child_nodes = [
         new_annotation(include_xmlns=True),
         XmlNodeAsDict(NodeName='Path',NodeInnerText=path),
@@ -630,6 +728,9 @@ def new_file_setting(path:str,filter:str,Is64Bit=True,logical_name=McmIdentifier
     return file_setting
 
 def get_file_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+    """Create a reference XmlNodeAsDict object from the supplied
+    file setting XmlNodeAsDict and authoring scope string
+    """
     nodes = []
     attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
@@ -668,6 +769,7 @@ def get_file_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:st
     return nodes
 
 def new_folder_setting(path,filter,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='Folder'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+    """Create a new folder based detection setting"""
     child_nodes = [
         new_annotation(include_xmlns=True),
         XmlNodeAsDict(NodeName='Path',NodeInnerText=path),
@@ -682,6 +784,9 @@ def new_folder_setting(path,filter,Is64Bit=True,logical_name=McmIdentifier().get
     return folder_setting
 
 def get_folder_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+    """Create a reference XmlNodeAsDict object from the supplied
+    folder setting XmlNodeAsDict and authoring scope string
+    """
     nodes = []
     attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
@@ -715,6 +820,7 @@ def get_folder_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:
     return nodes
 
 def new_msi_setting(product_code,IsPerUser=False,logical_name=McmIdentifier().get_logical_name(object_type_name='MSI'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+    """Create a new msi detection setting"""
     child_nodes = [
         new_annotation(include_xmlns=True),
         XmlNodeAsDict(NodeName='ProductCode',NodeInnerText=product_code)
@@ -728,6 +834,9 @@ def new_msi_setting(product_code,IsPerUser=False,logical_name=McmIdentifier().ge
     return msi_setting
 
 def get_msi_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+    """Create a reference XmlNodeAsDict object from the supplied
+    msi setting XmlNodeAsDict and authoring scope string
+    """
     nodes = []
     attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
@@ -756,6 +865,7 @@ def get_msi_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str
     return nodes
 
 def new_registrykey_setting(hive:str,key,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='RegKey'),external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+    """Create a new registry key based detection setting"""
     child_nodes = [
         new_annotation(include_xmlns=True),
         XmlNodeAsDict(NodeName='Key',NodeInnerText=key)
@@ -770,6 +880,9 @@ def new_registrykey_setting(hive:str,key,Is64Bit=True,logical_name=McmIdentifier
     return regkey_setting
 
 def get_registrykey_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict=None,version:int=1) -> list[XmlNodeAsDict]:
+    """Create a reference XmlNodeAsDict object from the supplied
+    registry key setting XmlNodeAsDict and authoring scope string
+    """
     nodes = []
     attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
@@ -790,6 +903,7 @@ def get_registrykey_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scop
 
 def new_registryvalue_setting(hive,key,value_name,data_type:str,Is64Bit=True,logical_name=McmIdentifier().get_logical_name(object_type_name='RegSetting'),
         create_missing_path:bool=True,depth:str="Base",external_reference_id:int=None,group_ids:list[int]=None) -> XmlNodeAsDict:
+    """Create a new registry value detection setting"""    
     registry_discovery_node_attributes = [
         XmlAttributeAsDict(Name='Hive',Value=hive),
         XmlAttributeAsDict(Name='Depth',Value=depth),
@@ -813,6 +927,9 @@ def new_registryvalue_setting(hive,key,value_name,data_type:str,Is64Bit=True,log
     return regvalue_setting
 
 def get_registryvalue_setting_reference_nodes(setting:XmlNodeAsDict,authoring_scope_id:str,application_id:str,setting_options:dict,version:int=1) -> list[XmlNodeAsDict]:
+    """Create a reference XmlNodeAsDict object from the supplied
+    registry value setting XmlNodeAsDict and authoring scope string
+    """
     nodes = []
     attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
@@ -853,6 +970,7 @@ get_setting_reference = {
 }
 
 def new_detection_rule_expression(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_item:dict,is_root:bool=False) -> XmlNodeAsDict:
+    """Create a new detection rule expression"""
     attributes = []
     if detection_item['Type'] == 'Group' and is_root == False:
         attributes.append(
@@ -885,6 +1003,7 @@ def new_detection_rule_expression(authoring_scope_id:str,application_id:str,depl
     return detection_rule_expression
 
 def new_setting(detection_type:str,options:dict) -> XmlNodeAsDict:
+    """Create a new detection setting"""
     try:
         setting_detection_type = DetectionType(detection_type)
     except:
@@ -904,6 +1023,9 @@ def new_setting(detection_type:str,options:dict) -> XmlNodeAsDict:
         return new_msi_setting(product_code=options['ProductCode'],IsPerUser=options.get('IsPerUser',False),external_reference_id=id(options))
 
 def get_nested_settings(detection_config:dict) -> list[XmlNodeAsDict]:
+    """Create detection settings objects for 'end' setting entities
+    (non-group objects)
+    """
     results = []
     if detection_config['Type'] == 'Group':
         for item in detection_config['Options']['Items']:
@@ -913,6 +1035,7 @@ def get_nested_settings(detection_config:dict) -> list[XmlNodeAsDict]:
     return results
 
 def new_detection_rule_node(authoring_scope_id:str,application_id,deployment_type_id:str,detection:dict,severity:str="None",noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+    """Create a new detection rule XmlNodeAsDict node"""
     expression = new_detection_rule_expression(authoring_scope_id=authoring_scope_id,
                     application_id=application_id,deployment_type_id=deployment_type_id,detection_item=detection,is_root=True)
     dt_model_name = f"{authoring_scope_id}/{deployment_type_id}"
@@ -930,6 +1053,7 @@ def new_detection_rule_node(authoring_scope_id:str,application_id,deployment_typ
     return rule_node
 
 def new_enhanced_detection_method_node(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_config:dict,severity:str='Informational',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+    """Create a new enhanced detection XmlNodeAsAttribute object"""
     setting_nodes = get_nested_settings(detection_config=detection_config)
     settings_node = XmlNodeAsDict(NodeName='Settings',ChildNodes=setting_nodes,Attributes=[XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('AppMgmtDigest')['ns'])])
     rule_node = new_detection_rule_node(authoring_scope_id=authoring_scope_id,application_id=application_id,deployment_type_id=deployment_type_id,
@@ -940,10 +1064,14 @@ def new_enhanced_detection_method_node(authoring_scope_id:str,application_id:str
     return enhanced_detection_method
 
 def new_requirements_rule(rule:dict,rule_id:str,severity='None',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+    """Create a new requirements rule"""
     raise Exception("Not supported yet.")
     pass
 
 def new_requirements_rule_from_string(rule:str,rule_id:str,severity='None',noncompliance_on_nonexistance:bool=False) -> XmlNodeAsDict:
+    """Convert a raw XML string to a requirements rule XmlNodeAsDict
+    object
+    """
     attributes = [
         XmlAttributeAsDict(Name='xmlns',Value=get_nsmap('Rule')['ns']),
         XmlAttributeAsDict(Name='id',Value=rule_id),
@@ -961,6 +1089,7 @@ get_requirements_rule_config = {
 }
 
 def new_dependency(authoring_scope_id:str,application_logical_name:str,dt_logical_name:str,auto_install:bool=False) -> XmlNodeAsDict:
+    """Create a new dependency"""
     dt_appref_attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),
         XmlAttributeAsDict(Name='LogicalName',Value=application_logical_name)
@@ -985,6 +1114,7 @@ def new_dependency(authoring_scope_id:str,application_logical_name:str,dt_logica
     return dependency
 
 def new_dependency_group(rule_name:str,dependencies:list[XmlNodeAsDict],id:str=None) -> XmlNodeAsDict:
+    """Create a new dependency group"""
     if id is None:
         id = McmIdentifier().get_logical_name(object_type_name='DTRule')
     attributes = [
@@ -1005,15 +1135,20 @@ def new_dependency_group(rule_name:str,dependencies:list[XmlNodeAsDict],id:str=N
     return XmlNodeAsDict(NodeName='DeploymentTypeRule',Attributes=attributes,ChildNodes=child_nodes)
 
 def new_dependencies_node(dependency_groups:list[XmlNodeAsDict]) -> XmlNodeAsDict:
+    """Create a new dependencies XmlNodeAsDict object from the supplied
+    dependency groups
+    """
     dependencies_node = XmlNodeAsDict(NodeName='Dependencies',ChildNodes=dependency_groups)
     return dependencies_node
 
 def new_requirements_node(requirements_rules:list[XmlNodeAsDict]) -> XmlNodeAsDict:
+    """Create a new requirements XmlNodeAsDict node"""
     requirements_node = XmlNodeAsDict(NodeName='Requirements',ChildNodes=requirements_rules)
     return requirements_node
 
 #Installer
 def new_process_information(process_name:str,process_display_name:str) -> XmlNodeAsDict:
+    """Create a new process detection object"""
     process_information = XmlNodeAsDict(
         NodeName='ProcessInformation',Attributes=[
             XmlAttributeAsDict(Name='Name',Value=process_name)
@@ -1038,6 +1173,9 @@ def new_process_information(process_name:str,process_display_name:str) -> XmlNod
     return process_information
 
 def new_install_process_detection(process_information:list[XmlNodeAsDict]) -> XmlNodeAsDict:
+    """Create an install process detection XmlNodeAsDict object from
+    the list of process information objects
+    """
     install_process_detection = XmlNodeAsDict(
         NodeName='InstallProcessDetection',
         ChildNodes=[
@@ -1050,6 +1188,7 @@ def new_install_process_detection(process_information:list[XmlNodeAsDict]) -> Xm
     return install_process_detection
 
 def new_arg(arg_name:str,arg_type:str,arg_value:any=None) -> XmlNodeAsDict:
+    """Create an arg XmlNodeAsDict object"""
     try:
         cls_arg_type = ArgumentType[arg_type]
     except:
@@ -1079,6 +1218,7 @@ def new_arg(arg_name:str,arg_type:str,arg_value:any=None) -> XmlNodeAsDict:
     return arg_node
 
 def new_dt_action(action_type:str,provider:str,args:list[XmlNodeAsDict],content_reference:XmlNodeAsDict=None) -> XmlNodeAsDict:
+    """Create a new deployment type action"""
     try:
         item_action_type = ActionType(action_type)
     except:
@@ -1102,7 +1242,10 @@ def new_dt_action(action_type:str,provider:str,args:list[XmlNodeAsDict],content_
     return action
 
 def new_detection_nodes(authoring_scope_id:str,application_id:str,deployment_type_id:str,detection_item:dict,execution_context:str='System') -> list:
-    """Output a list of exactly 2 items where item 0 is the DetectAction XmlNodeAsDict object and item 1 is itself a list of the detection nodes needed for the CustomData node."""
+    """Output a list of exactly 2 items where item 0 is the
+    DetectAction XmlNodeAsDict object and item 1 is itself a list of
+    the detection nodes needed for the CustomData node
+    """
     try:
         detection_type = DetectionType(detection_item.get('Type'))
     except:
@@ -1145,6 +1288,7 @@ def new_detection_nodes(authoring_scope_id:str,application_id:str,deployment_typ
 
 # Deployment Type
 def new_languages_node(languages:list[str]) -> XmlNodeAsDict:
+    """Create a languages XmlNodeAsDict object"""
     item_languages = []
     for l in languages:
         if l is not None:
@@ -1153,6 +1297,9 @@ def new_languages_node(languages:list[str]) -> XmlNodeAsDict:
     return languages_node
 
 def get_deployment_type_reference(deployment_type:XmlNodeAsDict) -> XmlNodeAsDict:
+    """Create a reference XmlNodeAsDict object from the supplied
+    deployment type XmlNodeAsDict
+    """
     attributes = [
         XmlAttributeAsDict(Name='AuthoringScopeId',Value=deployment_type.get_attribute_value('AuthoringScopeId')),
         XmlAttributeAsDict(Name='LogicalName',Value=deployment_type.get_attribute_value('LogicalName')),
@@ -1163,6 +1310,9 @@ def get_deployment_type_reference(deployment_type:XmlNodeAsDict) -> XmlNodeAsDic
     
 # Application
 def new_user_categories_node(user_category_unique_ids:list[str]) -> XmlNodeAsDict:
+    """Create a user categories XmlNodeAsDict object from the supplied
+    list of user category unique identifiers
+    """
     params = {'NodeName':'UserCategories'}
     if len(user_category_unique_ids) > 0:
         child_nodes = []
@@ -1173,15 +1323,19 @@ def new_user_categories_node(user_category_unique_ids:list[str]) -> XmlNodeAsDic
         params['ChildNodes'] = child_nodes
     user_categories_node = XmlNodeAsDict(**params)
     return user_categories_node
+
 def new_tags_node(tags:list[str]=[]) -> XmlNodeAsDict:
+    """Create a tags XmlNodeAsDict object from a list of tag strings"""
     tag_list = []
     for t in tags:
         tag_list.append(XmlNodeAsDict(NodeName='Tag',NodeInnerText=t))
     tags_node = XmlNodeAsDict(NodeName='Tags',ChildNodes=tag_list)
     return tags_node
+
 def new_display_info(title:str,language:str='en-US',publisher:str=None,software_version:str=None,release_date:str=datetime.now().strftime("%m/%d/%Y"),
             description:str=None,info_url:str=None,info_url_text:str=None,privacy_url:str=None,user_categories_node:XmlNodeAsDict=None,
             tags:list=None,icon_reference:XmlNodeAsDict=None):
+    """Create a new display info node"""
     attributes = [
         XmlAttributeAsDict(Name='Language',Value=language)
     ]
@@ -1229,6 +1383,9 @@ def new_display_info(title:str,language:str='en-US',publisher:str=None,software_
     return info
 
 def new_display_info_node(display_infos:list,default_language:str='en-US') -> XmlNodeAsDict:
+    """Create a new display info XmlNodeAsDict object from the supplied
+    list of display infos
+    """
     display_info_node = XmlNodeAsDict(
         NodeName='DisplayInfo',
         Attributes=[
@@ -1321,6 +1478,9 @@ class McmSDMPackageXMLGenerator(Processor):
             raise ProcessorError(f"Failed to retrieve scope ID: {e}")
     
     def find_application_by_name(self, application_name:str) -> dict:
+        """Connect to MCM, search for an SMS_Application with a
+        given name, and return its details
+        """
         self.output(f"Attempting to get application ({application_name}) from {self.fqdn}", 2)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_Application"
         body = {"$filter": f"LocalizedDisplayName eq '{application_name}' and IsLatest eq true",'$select':"CI_ID"}
@@ -1363,6 +1523,8 @@ class McmSDMPackageXMLGenerator(Processor):
         return return_object
 
     def find_task_sequence_by_name(self,task_sequence_name:str) -> dict:
+        """Connect to MCM, search for task sequence with a given
+        name, and return its details"""
         self.output(f"Attempting to get task sequence ({task_sequence_name}) from {self.fqdn}", 2)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_TaskSequencePackage"
         body = {"$filter": f"Name eq '{task_sequence_name}'",'$select':"Name,PackageId"}
@@ -1385,7 +1547,10 @@ class McmSDMPackageXMLGenerator(Processor):
         return searchResponse.json()["value"][0]
         
     def get_mcm_ntlm_auth(self, keychain_service_name: str, keychain_username: str) -> HttpNtlmAuth:
-        """Create NTLM authentication object from keychain credentials."""
+        """Get the credential from keychain using the supplied 
+        parameters and return an HttpNtlmAuth object from the retrieved
+        details
+        """
         try:
             password = keyring.get_password(keychain_service_name, keychain_username)
             if password is None:
@@ -1395,7 +1560,9 @@ class McmSDMPackageXMLGenerator(Processor):
             raise ProcessorError(f"Failed to retrieve credentials: {e}")
 
     def get_dt_logicalname_from_application(self,application:XmlNodeAsDict,deployment_type_name_filter:str=None,deployment_type_name_filter_type:str=None) -> str:
-        """Return the Logical Name of the deployment type matching the filter type and content"""
+        """Return the Logical Name of the deployment type matching
+        the filter type and content
+        """
         results = []
         application.get_attribute_value
         dts = application.find_children_by_name('DeploymentType')
@@ -1418,7 +1585,11 @@ class McmSDMPackageXMLGenerator(Processor):
         if len(results) == 0:
             raise ProcessorError("Could not find a deployment type with the given name/filter.")
         return results[0]
+
     def get_dt_logicalname_from_etree_application(self,application:etree.Element,deployment_type_name_filter:str,deployment_type_name_filter_type:str)->str:
+        """Retrieve a deployment type's logical name from an
+        application represented as an etree.Element object
+        """
         nsmap = self.nsmap
         if (DeploymentTypeFilterType[deployment_type_name_filter_type]):
             pass
@@ -1434,6 +1605,7 @@ class McmSDMPackageXMLGenerator(Processor):
         return results[0]
 
     def create_user_category(self, user_category_name:str)-> str:
+        """Connect to MCM and create a new user category"""
         self.output(f"Attempting to create user category ({user_category_name}) in {self.fqdn}", 2)
         raise ProcessorError("Creating user categories is not supported.")
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_Application"
@@ -1451,26 +1623,9 @@ class McmSDMPackageXMLGenerator(Processor):
         self.output(f"{searchValue.__len__()} Application objects returned from {self.fqdn}",3)
 
     def get_user_category_id(self, user_category_name:str) -> str:
-        self.output(f"Attempting to get user category ({user_category_name}) from {self.fqdn}", 3)
-        url = f"https://{self.fqdn}/AdminService/wmi/SMS_CategoryInstance?$filter=LocalizedCategoryInstanceName eq '{user_category_name}'"
-        searchResponse = requests.request(
-            method='GET',
-            url=url,
-            auth=self.ntlm,
-            headers=self.headers,
-            verify=False         
-        )
-        self.output(f"Done searching for category. {type(searchResponse).__name__} type object returned.",3)
-        searchValue = searchResponse.json()["value"]
-        self.output(f"{len(searchValue)} Application objects returned from {self.fqdn}",3)
-        if len(searchValue) == 0:
-            return None
-        elif len(searchValue) > 1:
-            raise ProcessorError('Ambiguous user category')
-        else:
-            return searchValue[0].get('CategoryInstance_UniqueID',None)
-
-    def get_user_category_id(self, user_category_name:str) -> str:
+        """Connect to MCM and search for a given user category
+        object
+        """
         self.output(f"Attempting to get user category ({user_category_name}) from {self.fqdn}", 3)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_CategoryInstance?$filter=LocalizedCategoryInstanceName eq '{user_category_name}'"
         searchResponse = requests.request(
@@ -1493,7 +1648,10 @@ class McmSDMPackageXMLGenerator(Processor):
             return uq_id
 
     def merge_deployment_types(self,authoring_scope_id:str,dicts:list[dict]=[],existing_deployment_types:list[XmlNodeAsDict]=[],persist_unhandled_deployment_types:bool=False)->list:
-        """Match configured deployment types to existing deployment types and return an ordered list of deployment types to add to an application."""
+        """Match configured deployment types to existing deployment
+        types and return an ordered list of deployment types to add to
+        an application
+        """
         try:
             self.output("Attempting to merge configured deployment types with those from an existing application.", 2)
             element_lookup = {d.find_children_by_name(node_name='Title')[0].get('NodeInnerText'): d for d in existing_deployment_types}
@@ -1560,6 +1718,10 @@ class McmSDMPackageXMLGenerator(Processor):
             raise ProcessorError(e)
 
     def add_install_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
+        """Parse the details of the deployment type dict and
+        add a new install action node to the installer root node
+        commensurate with the configuration
+        """
         try:
             visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
         except:
@@ -1660,7 +1822,12 @@ class McmSDMPackageXMLGenerator(Processor):
             raise ProcessorError("Not supported.")
         install_action = new_dt_action(**install_action_params)
         installer_root.append_child_node([install_action])
+
     def add_uninstall_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
+        """Parse the details of the deployment type dict and
+        add a new uninstall action node to the installer root node
+        commensurate with the configuration
+        """
         try:
             visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
         except:
@@ -1761,7 +1928,12 @@ class McmSDMPackageXMLGenerator(Processor):
         
         uninstall_action = new_dt_action(**uninstall_action_params)
         installer_root.append_child_node([uninstall_action])
+
     def add_repair_action(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict) -> None:
+        """Parse the details of the deployment type dict and
+        add a new repair action node to the installer root node
+        commensurate with the configuration
+        """
         try:
             visibility = ProgramVisibility(deployment_type_configuration.get('Options',{}).get('InstallationProgramVisibility','Hidden'))
         except:
@@ -1848,7 +2020,12 @@ class McmSDMPackageXMLGenerator(Processor):
         
         repair_action = new_dt_action(**repair_action_params)
         installer_root.append_child_node([repair_action])
+
     def add_technology_specific_custom_data(self,installer_root:XmlNodeAsDict,deployment_type_configuration:dict,detection_nodes:list) -> None:
+        """Parse the details of the deployment type dict and
+        add a custom data node to the installer root node
+        commensurate with the configuration
+        """
         custom_data_nodes = detection_nodes
         deployment_technology = deployment_type_configuration.get('Technology')
         if ['MSI','Script'].__contains__(deployment_technology):
@@ -1938,7 +2115,9 @@ class McmSDMPackageXMLGenerator(Processor):
                 processes.append(new_process_information(process_name=ipd['ProcessName'],process_display_name=ipd['DisplayName']))
             custom_data_nodes.append(new_install_process_detection(process_information=processes))
         installer_root.append_child_node([XmlNodeAsDict(NodeName='CustomData',ChildNodes=custom_data_nodes)])
+
     def new_installer_node(self,authoring_scope_id:str,application_id:str,logical_name:str,version:int,deployment_type_configuration:dict) -> XmlNodeAsDict:
+        """Create a new installer XmlNodeAsDict object"""
         installer_root = XmlNodeAsDict(NodeName='Installer',Attributes=[XmlAttributeAsDict(Name='Technology',Value=deployment_type_configuration.get('Technology'))])
         installer_root.append_child_node([
             XmlNodeAsDict(NodeName='ExecutionContext',NodeInnerText=deployment_type_configuration.get('ExecutionContext','System'))
@@ -1996,6 +2175,7 @@ class McmSDMPackageXMLGenerator(Processor):
         return installer_root
 
     def new_deployment_type(self,authoring_scope_id:str,application_id:str,logical_name:str,version:int,deployment_type_configuration:dict) -> XmlNodeAsDict:
+        """Create a new deployment type XmlNodeAsDict object"""
         self.output("Generating a deployment type node.", 3)
         attributes = [
             XmlAttributeAsDict(Name='AuthoringScopeId',Value=authoring_scope_id),

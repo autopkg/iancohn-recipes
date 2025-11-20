@@ -28,8 +28,8 @@ from autopkglib import Processor, ProcessorError
 
 # Utility
 def try_cast(type_name,value,default=None):
-    """Cast the supplied value as the indicated type. If it cannot cast,
-    return a default value
+    """Cast the supplied value as the indicated type. If it cannot
+    cast, return a default value
     """
     try:
         return type_name(value)
@@ -71,7 +71,7 @@ class XmlNodeAsDict(dict):
             XmlNodeAsDict.instance_map_by_external_id[f"{external_reference_id}"] = self
     @classmethod
     def convert_element_to_dict(cls,element:etree.Element,namespace_mode:str='PersistAsAttribute',parent_namespace:dict=None,is_root:bool=True)->XmlNodeAsDict:
-        """Convert an etree.Element object to XmlNodeAsDict class. Used 
+        """Convert an etree.Element object to XmlNodeAsDict class. Used
         to import existing XML objects
         """
         class NamespaceMode(Enum):
@@ -106,8 +106,9 @@ class XmlNodeAsDict(dict):
         return XmlNodeAsDict.convert_element_to_dict(element=xml,namespace_mode=namespace_mode)
     @classmethod
     def from_dict(cls, data):
-        """Convert an existing dict to an XmlNodeAsDict instance. Useful
-        if importing a dict which has been saved to a file as json
+        """Convert an existing dict to an XmlNodeAsDict instance.
+        Useful if importing a dict which has been saved to a file as
+        json
         """
         instance = cls(data)
         if 'ChildNodes' in instance and isinstance(instance('ChildNodes',list)):
@@ -117,8 +118,8 @@ class XmlNodeAsDict(dict):
         return instance
     @classmethod
     def from_json(cls, json_string):
-        """Convert an XmlNodeAsDict object which has been stored as JSON
-        back to an XmlNodeAsDict instance
+        """Convert an XmlNodeAsDict object which has been stored as
+        JSON back to an XmlNodeAsDict instance
         """
         data = json.loads(json_string)
         return cls.from_dict(data)
@@ -129,11 +130,13 @@ class XmlNodeAsDict(dict):
         for n in ChildNodes:
             self['ChildNodes'].append(n)
     def set_node_inner_text(self,NodeInnerText:str):
-        """Overwrite the existing NodeInnerText with the supplied string"""
+        """Overwrite the existing NodeInnerText with the supplied
+        string
+        """
         self['NodeInnerText'] = NodeInnerText
     def has_children(self):
-        """Return True if the XmlNodeAsDict instance's ChildNodes contains 1
-        or more XmlNodeAsDict instances
+        """Return True if the XmlNodeAsDict instance's ChildNodes
+        contains one or more XmlNodeAsDict instances
         """
         if len(self.get('ChildNodes',[])) == 0:
             return False
@@ -170,8 +173,9 @@ class XmlNodeAsDict(dict):
         xml_string = etree.tostring(xml,pretty_print=pretty_print,xml_declaration=include_xml_declaration,encoding=encoding).decode(encoding)
         return xml_string
     def get_attribute_value(self,attribute_name:str)->str:
-        """Return the Value property for the XmlAttributeAsDict instance
-        attached to this instance for the given attribute name
+        """Return the Value property for the XmlAttributeAsDict
+        instance attached to this instance for the given attribute
+        name
         """
         if (attribute_name,'') == '':
             raise ValueError("Must specify an attribute name to retrieve.")
@@ -210,7 +214,9 @@ class XmlNodeAsDict(dict):
         return cls._convert_element_with_tracking(root, explicit_ns_map)
     @classmethod
     def _convert_element_with_tracking(cls,element:etree.Element,explicit_ns_map:dict):
-        """Convert element, preserving explicit namespace declarations"""
+        """Convert element, preserving explicit namespace
+        declarations
+        """
         element_id = id(element)
         params = {
             "NodeName": etree.QName(element).localname,
@@ -244,8 +250,9 @@ class XmlNodeAsDict(dict):
 __all__ = ["McmApplicationUploader"]
 
 class McmApplicationUploader(Processor):
-    description = """AutoPkg Processor to connect to an MCM Admin Service 
-        and retrieve an application object, if it exists"""
+    description = """AutoPkg Processor to connect to an MCM Admin
+    Service and retrieve an application object, if it exists
+    """
     input_variables = {
         "keychain_password_service": {
             "required": False,
@@ -305,8 +312,9 @@ class McmApplicationUploader(Processor):
         return scopeId
 
     def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
-        """Get the credential from keychain using the supplied parameters
-        and return an HttpNtlmAuth object from the retrieved details
+        """Get the credential from keychain using the supplied 
+        parameters and return an HttpNtlmAuth object from the retrieved
+        details
         """
         password = keyring.get_password(keychainServiceName,keychainUsername)
         return HttpNtlmAuth(keychainUsername,password)

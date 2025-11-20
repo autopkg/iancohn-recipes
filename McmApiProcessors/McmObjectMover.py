@@ -24,7 +24,7 @@ from autopkglib import Processor,ProcessorError
 __all__ = ["McmObjectMover"]
 
 class McmObjectMover(Processor):
-    description = """Move an object to a specified folder"""
+    description = """Move an MCM object to a specified folder"""
 
     input_variables = {
         "keychain_password_service": {
@@ -65,6 +65,11 @@ class McmObjectMover(Processor):
 
     __doc__ = description
     def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+        """Get the credential from keychain using the supplied
+        parameters and return an HttpNtlmAuth object from the retrieved
+        details
+        """
+
         password = keyring.get_password(keychainServiceName,keychainUsername)
         return HttpNtlmAuth(keychainUsername,password)
     
@@ -72,7 +77,10 @@ class McmObjectMover(Processor):
         """Return a dict of mcm object names"""
 
     def get_mcm_object_type_id(self,object_key) -> int:
-        """Return the unique id that MCM assigns to an object id for use in security scope assignment by querying the SMS_SecuredCategoryMembership for the object."""
+        """Return the unique id that MCM assigns to an object id for
+        use in security scope assignment by querying the
+        SMS_SecuredCategoryMembership for the object
+        """
         self.output(f"Getting ObjectTypeID for {object_key}")
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_SecuredCategoryMembership?$filter=startsWith(ObjectKey,'{self.object_key}') eq true"
         sms_secured_category_membership = requests.request(
@@ -88,7 +96,9 @@ class McmObjectMover(Processor):
             raise ProcessorError('Could not locate the ObjectTypeID for the given ObjectKey')
 
     def get_mcm_folder_map(self) -> dict:
+        """Connect to MCM and return a map of object folders"""
         def get_path(node_id:int,nodes_by_id:dict) -> str:
+            """Helper function to return the path of a folder object"""
             node = nodes_by_id[node_id]
             path = f"/{node['Name']}"
             if node['ParentContainerNodeID'] != 0:
@@ -115,6 +125,9 @@ class McmObjectMover(Processor):
         }
 
     def uses_revisions(self,object_class:str,dynamic:bool=False) -> bool:
+        """Return True if the object uses revisions. This determines
+        if the object type should be suffixed with 'Latest'
+        """
         if dynamic == True:
             raise ProcessorError("Dynamic revision determination not supported at this time.")
         else:
@@ -122,6 +135,7 @@ class McmObjectMover(Processor):
         return result
 
     def main(self):
+        """McmObjectMover Main Method"""
         self.output("Generating headers.",3)
         self.headers = {
             "Accept": "application/json",

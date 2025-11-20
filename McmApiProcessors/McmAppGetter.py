@@ -26,7 +26,9 @@ from autopkglib import Processor, ProcessorError
 __all__ = ["McmAppGetter"]
 
 class McmAppGetter(Processor):
-    description = """AutoPkg Processor to connect to an MCM Admin Service and retrieve an application object, if it exists."""
+    description = """AutoPkg Processor to connect to an MCM Admin
+    Service and retrieve an application object, if it exists
+    """
     input_variables = {
         "keychain_password_service": {
             "required": False,
@@ -74,16 +76,23 @@ class McmAppGetter(Processor):
     __doc__ = description
 
     def convert_site_id_to_scope_id(self,siteId:str) -> str:
+        """Convert a SiteID string to a scope id"""
         siteIdGuid = siteId.replace('{','').replace('}','')
         scopeId = f"ScopeId_{siteIdGuid}"
         return scopeId
 
     def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+        """Get the credential from keychain using the supplied
+        parameters and return an HttpNtlmAuth object from the retrieved
+        details
+        """
         password = keyring.get_password(keychainServiceName,keychainUsername)
         return HttpNtlmAuth(keychainUsername,password)
 
     def strip_namespaces(element):
-        """Remove all namespaces from an XML element for easier XPath query support"""
+        """Remove all namespaces from an XML element for easier XPath
+        query support
+        """
         for e in element.iter():
             if e.tag is not etree.Comment:
                 e.tag = etree.QName(e).localname

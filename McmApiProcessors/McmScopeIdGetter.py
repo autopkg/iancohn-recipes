@@ -50,11 +50,16 @@ class McmScopeIdGetter(Processor):
     __doc__ = description
 
     def convert_site_id_to_scope_id(self,siteId:str) -> str:
+        """Convert a SiteID string to a scope id"""
         siteIdGuid = siteId.replace('{','').replace('}','')
         scopeId = f"ScopeId_{siteIdGuid}"
         return scopeId
 
     def get_mcm_ntlm_auth(self, keychainServiceName:str, keychainUsername:str) -> HttpNtlmAuth:
+        """Get the credential from keychain using the supplied
+        parameters and return an HttpNtlmAuth object from the retrieved
+        details
+        """
         password = keyring.get_password(keychainServiceName,keychainUsername)
         return HttpNtlmAuth(keychainUsername,password)
 
