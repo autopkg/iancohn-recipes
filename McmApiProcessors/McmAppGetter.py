@@ -75,23 +75,23 @@ class McmAppGetter(Processor):
     
     __doc__ = description
 
-    def convert_site_id_to_scope_id(self, siteId: str) -> str:
+    def convert_site_id_to_scope_id(self, site_id: str) -> str:
         """Convert a SiteID string to a scope id"""
-        siteIdGuid = siteId.replace('{','').replace('}','')
-        scopeId = f"ScopeId_{siteIdGuid}"
-        return scopeId
+        site_id_guid = site_id.replace('{','').replace('}','')
+        scope_id = f"ScopeId_{site_id_guid}"
+        return scope_id
 
     def get_mcm_ntlm_auth(
-            self, keychainServiceName: str, keychainUsername: str
+            self, keychain_service_name: str, keychain_username: str
             ) -> HttpNtlmAuth:
         """Get the credential from keychain using the supplied
         parameters and return an HttpNtlmAuth object from the retrieved
         details
         """
         password = keyring.get_password(
-            keychainServiceName,keychainUsername
+            keychain_service_name,keychain_username
             )
-        return HttpNtlmAuth(keychainUsername,password)
+        return HttpNtlmAuth(keychain_username,password)
 
     def strip_namespaces(element):
         """Remove all namespaces from an XML element for easier XPath
@@ -113,11 +113,11 @@ class McmAppGetter(Processor):
                 "Content-Type": "application/json"
             }
             self.output("Checking supplied parameters",3)
-            keychainServiceName = self.env.get(
+            keychain_service_name = self.env.get(
                 "keychain_password_service",
                 self.input_variables["keychain_password_service"]["default"]
                 )
-            keychainUsername = self.env.get(
+            keychain_username = self.env.get(
                 "keychain_password_username",
                 self.env.get("MCMAPI_USERNAME",'')
                 )
@@ -126,12 +126,12 @@ class McmAppGetter(Processor):
             if (fqdn == None or fqdn == ''):
                 raise ProcessorError("mcm_site_server_fqdn cannot be blank")
 
-            if (keychainServiceName == None or keychainUsername == ''):
+            if (keychain_service_name == None or keychain_username == ''):
                 raise ProcessorError(
                     "keychain_password_service cannot be blank"
                     )
 
-            if (keychainUsername == None or keychainUsername == ''):
+            if (keychain_username == None or keychain_username == ''):
                 raise ProcessorError(
                     "keychain_password_username cannot be blank"
                     )
@@ -142,26 +142,25 @@ class McmAppGetter(Processor):
                 "/wmi/SMS_Identification.GetSiteID"
             )
             ntlm = self.get_mcm_ntlm_auth(
-                keychainServiceName=keychainServiceName,
-                keychainUsername=keychainUsername
+                keychain_service_name = keychain_service_name,
+                keychain_username = keychain_username
                 )
-            response = requests.request(
-                method='GET',
-                url=url,
-                auth=ntlm,
-                headers=headers,
-                timeout=10,
-                verify=False
+            site_info_response = requests.request(
+                method = 'GET',
+                url = url,
+                auth = ntlm,
+                headers = headers,
+                verify = False
             )
-            siteInfoJsonResponse = response.json()
-            siteId = siteInfoJsonResponse.get('SiteID')
+            site_info_json = site_info_response.json()
+            site_id = site_info_json.get('SiteID')
             self.output(
-                f"Converting {siteId} to scope id and setting it as "
+                f"Converting {site_id} to scope id and setting it as "
                 "mcm_scope_id",
                 2
                 )
             self.env["mcm_scope_id"] = self.convert_site_id_to_scope_id(
-                siteId=siteId
+                site_id=site_id
                 )
             application_name = self.env.get("application_name")
             self.output(
@@ -177,8 +176,8 @@ class McmAppGetter(Processor):
                     ),
                 '$select': "CI_ID"}
             self.output(f"Body: {body}", 3)
-            appSearchResponse = requests.request(
-                method='GET',
+            app_search_response = requests.request(
+                method = 'GET',
                 url=url,
                 auth=ntlm,
                 headers=headers,
@@ -188,21 +187,21 @@ class McmAppGetter(Processor):
             self.output(
                 (
                     "Done searching for application. "
-                    f"{type(appSearchResponse).__name__} type object returned."
+                    f"{type(app_search_response).__name__} type object returned."
                 ),
                 3,
             )
 
-            appSearchJson = appSearchResponse.json()
-            appSearchValue = appSearchJson.get('value',[])
-            if len(appSearchValue) == 0:
+            app_search_json = app_search_response.json()
+            app_search_value = app_search_json.get('value',[])
+            if len(app_search_value) == 0:
                 self.output('Application not found.', 2)
                 return
-            self.output(f"Getting app with ci_id: {appSearchValue[0].get('CI_ID')}", 3)
-            if len(appSearchValue) == 1:
+            self.output(f"Getting app with ci_id: {app_search_value[0].get('CI_ID')}", 3)
+            if len(app_search_value) == 1:
                 appUrl = (
                     f"https://{fqdn}/AdminService/wmi/"
-                    f"SMS_Application({appSearchValue[0].get('CI_ID')})"
+                    f"SMS_Application({app_search_value[0].get('CI_ID')})"
                 )
                 app = requests.request(
                     method='GET',
@@ -212,11 +211,11 @@ class McmAppGetter(Processor):
                     verify=False,
                     timeout=(2,5)
                 )
-            if len(appSearchValue) > 1:
+            if len(app_search_value) > 1:
                 raise ProcessorError(
                     "Non-unique application object was returned from MCM"
                     )
-            elif len(appSearchValue) == 0:
+            elif len(app_search_value) == 0:
                 self.output(
                     "No application was returned. "
                     "Specified export properties will be populated with "
@@ -226,7 +225,7 @@ class McmAppGetter(Processor):
                 raise ProcessorError(
                     f"An error was encountered whilst "
                     "retrieving an application with CI_ID: "
-                    f"{appSearchValue[0].get('CI_ID')}"
+                    f"{app_search_value[0].get('CI_ID')}"
                     )
             app_value = app.json()['value'][0]
             export_properties:dict = self.env.get(
