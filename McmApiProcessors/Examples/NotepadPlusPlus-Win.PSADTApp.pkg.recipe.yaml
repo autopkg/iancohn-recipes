@@ -1,0 +1,98 @@
+Description: |
+  Creates an XML representation for an MCM Application object, uploads it to
+  the management point, sets the security scope, and moves it to the
+  correct folder.
+Identifier: com.github.iancohn.mcm.NotepadPlusPlus-Win
+MinimumVersion: "2.7.6"
+ParentRecipe: com.github.iancohn.psadt.NotepadPlusPlus-Win
+Input:
+  NAME: NotepadPlusPlus
+  COMPANY: NotepadPlusPlus
+Process:
+  - Processor: EndOfCheckPhase
+  - Processor: com.github.iancohn.mcm-api.processors/McmAppGetter
+    Arguments:
+      keychain_password_username: user1@company,com
+      mcm_site_server_fqdn: mcm-mp.company.com
+      application_name: Notepad++ - %version%
+      export_properties:
+        existing_app_ci_id: "CI_ID"
+        existing_app_sdmpackagexml: "SDMPackageXML"
+        existing_app_securityscopes: "SecuredScopeNames"
+      xml_only_first: True
+  - Processor: com.github.iancohn.mcm-api.processors/McmSDMPackageXMLGenerator
+    Arguments:
+      mcm_application_configuration:
+        Name: Notepad++ - %version%
+        SkipMcmQueries: False
+        BehaviorIfExists: AppendIndex
+        Description: Notepad++ is a text editor for windows
+        Owners: 
+          - user1
+        SupportContacts:
+          - tech-support
+        SendToProtectedDP: True
+        AutoInstall: True
+        DefaultLanguage: en-US
+        LocalizedDisplayName: Notepad++
+        LocalizedDescription: Notepad++ is a free (as in “free speech” and also as in “free beer”) source code editor and Notepad replacement that supports several programming languages. # In default language Self Service/Company Portal, defaults to the main application's description.
+        IconFileUnixPath: /Volumes/destination_repo/Icons/NotepadPlusPlus.png
+        LinkText: "Additional Information"
+        PrivacyUrl: "https://notepad-plus-plus.org/privacy/"
+        UserDocumentation: "https://notepad-plus-plus.org/online-help/"
+        IsFeatured: True,
+        Publisher: Don Ho
+        SoftwareVersion: '%version%'
+        PersistUnhandledDeploymentTypes: True
+        DeploymentTypes:
+          -
+            Technology: "Script"
+            Options: 
+              DeploymentTypeName: "Install %NAME% - PSADT"
+              BehaviorIfExists: "Update"
+              AdministratorComment: Created by AutoPkg %AUTOPKG_VERSION% on %datetime%
+              InstallProcessDetection:
+                -
+                  ProcessName: 'notepad++.exe'
+                  DisplayName: 'Notepad++'
+              AllowUninstall: True
+              ContentLocation: '\\storage.company.com\share\destination_repo\NotepadPlusPlus\%NAME%-%version%'
+              ContentLocation_Local: "%RECIPE_CACHE_DIR%/%NAME%"
+              PersistContentInClientCache: False
+              InstallationProgram: '%SYSTEMROOT%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NonInteractive -File .\Invoke-AppDeployToolkit.ps1 -DeploymentType Install -DeployMode Silent'
+              InstallationStartIn: ''
+              Force32BitInstaller: False
+              RequiresUserInteraction: False
+              UninstallProgram: '%SYSTEMROOT%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NonInteractive -File .\Invoke-AppDeployToolkit.ps1 -DeploymentType Uninstall -DeployMode Silent'
+              UninstallStartIn: ''
+              UninstallSetting: NoneRequired
+              InstallationProgramVisibility: "Hidden"
+              LogonRequirementType: "WhetherOrNotUserLoggedOn"
+              InstallationBehaviorType: "InstallForSystem"
+              RebootBehavior: "BasedOnExitCode"
+              MaximumAllowedRuntimeMins: 15
+              EstimatedInstallationTimeMins: 5
+              KeepDefaultReturnCodes: True
+              Detection:
+                Type: RegistryKeyValue
+                Options:
+                  Hive: HKEY_LOCAL_MACHINE
+                  Key: SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++
+                  ValueName: DisplayVersion
+                  DataType: Version
+                  Operator: GreaterEquals
+                  ValueData: '%version%'
+  - Processor: StopProcessingIf
+    Arguments:
+      predicate: SDMPackageXML == "None" or SDMPackageXML == ""
+  - Processor: com.github.iancohn.mcm-api.processors/McmApplicationUploader
+    Arguments:
+      mcm_application_sdmpackagexml: "%SDMPackageXML%"
+  - Processor: com.github.iancohn.mcm-api.processors/McmScopeSetter
+    Arguments:
+      action: replace
+      security_scopes:
+        - Some-Scope
+  - Processor: com.github.iancohn.mcm-api.processors/McmObjectMover
+    Arguments:
+      target_object_path: "/AutoPkg"
