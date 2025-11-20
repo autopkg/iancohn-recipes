@@ -11,8 +11,8 @@ Input:
   PSADT_APP_ARCH: "" #| # Make this argument an empty string if not using.
   PSADT_APP_VENDOR: "" #| # Make this argument an empty string if not using.
   PSADT_APP_NAME: "" #| # Make this argument an empty string if not using.
-  PSADT_TEMPLATE_ZIP_PATH: "%RECIPE_DIR%/../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/PSAppDeployToolkit_Template_v4.zip"
-  PSADT_INVOKE_SCRIPT_TEMPLATE_PATH: "%RECIPE_DIR%/../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/Invoke-AppDeployToolkit.ps1"
+  PSADT_TEMPLATE_ZIP_PATH: "%RECIPE_DIR%/../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/4.1.3/PSAppDeployToolkit_Template_v4.zip"
+  PSADT_INVOKE_SCRIPT_TEMPLATE_PATH: "%RECIPE_DIR%/../../com.github.autopkg.iancohn-recipes/PsAppDeployToolkit/Templates/4.1.3/Invoke-AppDeployToolkit.ps1"
   PSADT_CUSTOM_PARAMETERS: "" #| # Make this an empty string if not using.
 #    [Parameter(Mandatory = $false)]
 #    [System.Management.Automation.SwitchParameter]$SampleParameter,
