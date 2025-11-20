@@ -141,4 +141,31 @@ The mcm_application_configuration input variable is really the core of this suit
 | DeploymentTypes | A list of dictionary objects conforming to the DeploymentType dictionary format &nbsp;[See below](#deploymenttype) | list(dictionary) | any number of properly configured dictionaries | `<None>`
 
 ### DisplayInfo
+The DisplayInfo key of the [mcm_application_configuration](#mcm_application_configuration) root node can be populated with an array of localized display information objects conforming to the below standard. By default, properties will inherit their values from the default language and root application object. Most properties can be overridden, or set to `Null` or an empty string if they should be left blank.
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Language | The language that this localized display info is for | string | no | any unique, valid language string | `en-US` |
+| LocalizedDisplayName | The localized display name to display for users in Software Center/Company Portal | string | yes | any string | Inherits from the default language |
+| LocalizedDescription | The localized description to display for users in Software Center/Company Portal | string | no | any string | `<None>` |
+| Keyword | A list of localized keywords users may search for in Software Center/Company Portal | list(string) | no | any (reaonsable) number of strings | `<None>` |
+| LinkText | The display text for a link to display for users | string | no | any string | `Additional Information` |
+| UserDocumentation | The url to localized user documentation for the application | string | no | any non-local uri (cannot point to localhost) | `<None>` |
+| IsFeatured | Whether to feature the application in Software Center/Company portal when it is deployed as 'Available' | boolean | no | `False`,`True` | `False` |
+
 ### DeploymentType
+DeploymentType objects can be somewhat tricky since the available possible values depends on the deployment or detection technology type that is used.
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Technology | The deployment technology type | yes | `Script`, `MSI`, (`TaskSequence` - **Not yet supported**), (`Windows8App` - **Not yet supported**) | `<None>` |
+| Priority | 
+
+
+#### Notes
+* Priority
+In most cases where you are only creating a new application and creating a single deployment type, can be left as Null or ommitted entirely from the dictionary. In more complex scenarios, the following behaviors can be configured where PersistUnhandledDeploymentTypes is set to `True` (setting it to False causes any existing deployment types to be dropped from the updated application object)
+  - Configuring Priority to 'null' declares the following intent:
+    - If the deployment type already exists, and BehaviorIfExists is set to 'Update', it will maintain its current priority.
+    - If the deployment type does not already exist, or if it exists and BehaviorIfExists is set to 'AppendVersion' or 'AppendIndex', it will be added to the end in the order in which it appears here.
+  - Configuring Priority to an integer will cause the deployment types on an existing application to be re-ordered depending on the configuration. For example, configuring DeploymentType list objects with priorities 1, 3, and 5 would cause 2 existing deployment types to be interlaced into positions 2 and 4.
