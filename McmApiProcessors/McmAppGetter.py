@@ -48,7 +48,7 @@ class McmAppGetter(Processor):
             "required": True,
             "description": "The name of the application in MCM to search for."
         },
-        "export_properties": {
+        "mcm_app_getter_export_properties": {
             "required": False,
             "default": {
                 "existing_app_ci_id": {"type": "property", "raise_error": False,"options": {"expression": "CI_ID"}},
@@ -229,9 +229,9 @@ class McmAppGetter(Processor):
                     f"{app_search_value[0].get('CI_ID')}"
                     )
             app_value = app.json()['value'][0]
-            export_properties:dict = self.env.get(
-                'export_properties',
-                self.input_variables['export_properties']['default']
+            export_properties: dict = self.env.get(
+                'mcm_app_getter_export_properties',
+                self.input_variables['mcm_app_getter_export_properties']['default']
                 )
             self.output("Setting the value of specified export properties",2)
             for k in list(export_properties.keys()):
