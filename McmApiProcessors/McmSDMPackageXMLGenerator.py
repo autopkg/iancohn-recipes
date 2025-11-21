@@ -638,8 +638,10 @@ def new_icon_resource(
         _ = buffer.seek(0)
         encoded = base64.b64encode(buffer.read())\
             .decode(encoding = b64_encoding)
-    icon_id = f"Icon_p-{''.join(\
-        random.choices(string.ascii_letters + string.digits, k = id_length))}"
+    icon_id_string_choices = random.choices(
+        string.ascii_letters + string.digits, k = id_length
+        )
+    icon_id = f"Icon_p-{''.join(icon_id_string_choices)}"
     attributes = [XmlAttributeAsDict(Name = 'Id', Value = icon_id)]
     data_node = XmlNodeAsDict(NodeName = 'Data', NodeInnerText = encoded)
     icon_resource = XmlNodeAsDict(
@@ -2595,10 +2597,11 @@ class McmSDMPackageXMLGenerator(Processor):
             deployment_types_node = XmlNodeAsDict(NodeName = 'DeploymentTypes', ChildNodes = deployment_type_references)                
             application.append_child_node([deployment_types_node])
             self.output("Adding title", 2)
-            application.append_child_node([XmlNodeAsDict(NodeName = 'Title', Attributes = [new_resource_id_attribute()], NodeInnerText = app_name)])
-            if len(default_localized_description or []) > 0:
+            application.append_child_node([XmlNodeAsDict(NodeName = "Title", Attributes = [new_resource_id_attribute()], NodeInnerText = app_name)])
+            app_description = app.get('Description', '')
+            if len(app_description or []) > 0:
                 self.output("Adding description", 2)
-                application.append_child_node([XmlNodeAsDict(NodeName = 'Description', Attributes = [new_resource_id_attribute()], NodeInnerText = default_localized_description)])
+                application.append_child_node([XmlNodeAsDict(NodeName = "Description", Attributes = [new_resource_id_attribute()], NodeInnerText = default_localized_description)])
             if len(publisher or []) > 0:
                 self.output("Adding publisher", 2)
                 application.append_child_node([XmlNodeAsDict(NodeName = 'Publisher', Attributes = [new_resource_id_attribute()], NodeInnerText = publisher)])
@@ -2624,7 +2627,15 @@ class McmSDMPackageXMLGenerator(Processor):
                 self.output("Allowing send to protected dp", 3)
                 application.append_child_node([XmlNodeAsDict(NodeName = 'SendToProtectedDP', NodeInnerText = 'true')])
             self.output("Creating AppMgmtDigest.", 2)
-            app_mgmt_digest_root = XmlNodeAsDict(NodeName = 'AppMgmtDigest', Attributes = [XmlAttributeAsDict(Name = 'xmlns', Value = get_nsmap('AppMgmtDigest')['ns'])], nsmap = get_nsmap("Default", include_xsi = True)['nsmap'])
+            app_mgmt_digest_root = XmlNodeAsDict(
+                NodeName = 'AppMgmtDigest', 
+                Attributes = [
+                    XmlAttributeAsDict(
+                        Name = 'xmlns',
+                        Value = get_nsmap('AppMgmtDigest')['ns']
+                        )], 
+                nsmap = get_nsmap("Default", include_xsi = True)['nsmap']
+                )
             self.output("Adding application node", 3)
             app_mgmt_digest_root.append_child_node([application])
             if len(dt_list) > 0:

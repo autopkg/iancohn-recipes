@@ -51,9 +51,9 @@ class McmAppGetter(Processor):
         "mcm_app_getter_export_properties": {
             "required": False,
             "default": {
-                "existing_app_ci_id": {"type": "property", "raise_error": False,"options": {"expression": "CI_ID"}},
-                "existing_app_sdmpackagexml": {"type": "property", "raise_error": False,"options": {"expression": "SDMPackageXML"}},
-                "existing_app_securityscopes": {"type": "property", "raise_error": False,"options": {"expression": "SecuredScopeNames"}}
+                "existing_app_ci_id": {"type": "property", "raise_error": False,"options": {"property": "CI_ID"}},
+                "existing_app_sdmpackagexml": {"type": "property", "raise_error": False,"options": {"property": "SDMPackageXML"}},
+                "existing_app_securityscopes": {"type": "property", "raise_error": False,"options": {"property": "SecuredScopeNames"}}
             },
             "description": 
                 "A dictionary specifying the properties to retrieve, and the AutoPkg variables to use to store the output. "
@@ -244,15 +244,12 @@ class McmAppGetter(Processor):
                 eval_property = export_properties[k]['options']['property']
                 if export_properties[k]["type"] == 'property':
                     if not app_value.__contains__(
-                        export_properties[k]['options']['expression']
+                        eval_property
                         ) and export_properties[k].get(
                             'raise_error',False
                             ) == True:
                         raise ProcessorError(f"Property {export_properties[k]['options']['expression']} does not exist on the retrieved object. Valid properties are: {', '.join(list(app_value.keys()))}")
-                    value = app_value.get(
-                        export_properties[k]['options']['expression'],
-                        None
-                        )
+                    value = app_value.get(eval_property, None)
                 elif export_properties[k]["type"] == 'xpath':
                     if not app_value.__contains__(
                         eval_property
@@ -295,8 +292,8 @@ class McmAppGetter(Processor):
                                 xml_element = McmAppGetter.strip_namespaces(
                                     xml_element
                                     )
-                            xml_xpath_expr = export_properties[k][
-                                'options']['expression']
+                            xml_xpath_expr = export_properties[k]\
+                                ['options']['expression']
                             results = xml_element.xpath(xml_xpath_expr)
                             self.output(
                                 "Got results from xpath expression",

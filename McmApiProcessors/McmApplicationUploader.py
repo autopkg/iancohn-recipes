@@ -302,12 +302,12 @@ class McmApplicationUploader(Processor):
         "mcm_app_uploader_export_properties": {
             "required": False,
             "default": {
-                "app_ci_id": {"type": "property", "raise_error": False,"options": {"expression": "CI_ID"}},
-                "app_model_name": {"type": "property", "raise_error": True,"options": {"expression": "ModelName"}},
-                "object_class": {"type": "property", "raise_error": True,"options": {"expression": "__CLASS"}},
-                "current_object_path": {"type":"property", "raise_error": False, "options": {"expression": "ObjectPath"}},
-                "app_securityscopes": {"type": "property", "raise_error": False,"options": {"expression": "SecuredScopeNames"}},
-                "app_is_deployed": {"type": "property", "raise_error": True, "options": {"expression": "IsDeployed"}},
+                "app_ci_id": {"type": "property", "raise_error": False,"options": {"property": "CI_ID"}},
+                "app_model_name": {"type": "property", "raise_error": True,"options": {"property": "ModelName"}},
+                "object_class": {"type": "property", "raise_error": True,"options": {"property": "__CLASS"}},
+                "current_object_path": {"type":"property", "raise_error": False, "options": {"property": "ObjectPath"}},
+                "app_securityscopes": {"type": "property", "raise_error": False,"options": {"property": "SecuredScopeNames"}},
+                "app_is_deployed": {"type": "property", "raise_error": True, "options": {"property": "IsDeployed"}},
                 "app_logical_name": {"type": "xpath", "raise_error": True,"options": {"select_value_index": '0', "strip_namespaces": False, "property": "SDMPackageXML", "expression": '/*[local-name()="AppMgmtDigest"]/*[local-name()="Application"]/@LogicalName'}},
                 "app_content_locations": {"type": "xpath", "raise_error": False,"options": {"select_value_index": '*', "strip_namespaces": True, "property": "SDMPackageXML", "expression": '//Content/Location/text()'}}
             },
@@ -416,7 +416,7 @@ class McmApplicationUploader(Processor):
                     f"{post_json['error']['message']}"
                     )
                 self.output(json.dumps(post_json), 4)
-            app_value = post_json['value'][0]
+            app_value = post_json
             default_export_properties = \
                 self.input_variables\
                     ['mcm_app_uploader_export_properties']\
@@ -440,19 +440,16 @@ class McmApplicationUploader(Processor):
                     )
                 eval_property = export_properties[k]['options']['property']
                 if export_properties[k]["type"] == 'property':
-                    if not app_value.__contains__(
-                        export_properties[k]['options']['expression']
-                        ) and export_properties[k].get(
+                    if (not app_value.__contains__(eval_property)
+                        and export_properties[k].get(
                             'raise_error',False
-                            ) == True:
+                            ) == True
+                            ):
                         raise ProcessorError(
-                            f"Property {xml_xpath_expr} does not exist on "
+                            f"Property {eval_property} does not exist on "
                             "the retrieved object. Valid properties are: "
                             f"{', '.join(list(app_value.keys()))}")
-                    value = app_value.get(
-                        export_properties[k]['options']['expression'],
-                        None
-                        )
+                    value = app_value.get(eval_property, None)
                 elif export_properties[k]["type"] == 'xpath':
                     if not app_value.__contains__(
                         eval_property
