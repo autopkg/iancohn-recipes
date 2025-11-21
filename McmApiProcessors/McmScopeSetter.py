@@ -60,11 +60,7 @@ class McmScopeSetter(Processor):
         }
 
     }
-    output_variables = {
-        "mcm_package_scope_set": {
-            "description": "Indicates whether the package scope was successfully set.",
-        },
-    }
+    output_variables = {}
 
     __doc__ = description
 

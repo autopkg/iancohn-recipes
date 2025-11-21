@@ -46,7 +46,7 @@ class McmObjectMover(Processor):
         },
         "object_key": {
             "required": False,
-            "description": "The object key of the object to set security scopes on. Defaults to the value of app_model_name"
+            "description": "The object key of the object to move. Defaults to the value of app_model_name"
         },
         "current_object_path": {
             "required": False,
@@ -57,11 +57,7 @@ class McmObjectMover(Processor):
             "description": "The target location for the object.",
         }
     }
-    output_variables = {
-        "mcm_package_scope_set": {
-            "description": "Indicates whether the package scope was successfully set.",
-        },
-    }
+    output_variables = {}
 
     __doc__ = description
     def get_mcm_ntlm_auth(
