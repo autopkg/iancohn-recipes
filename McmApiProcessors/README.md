@@ -1,5 +1,4 @@
 # About McmProcessors
-
 Processors in this directory were written due to a somewhat immediate need to rapidly scale application packaging needs with a Microsoft Configuration Manager (MCM) environment. As such, the implementation is currently, admittedly crude, and should be regarded as a ~~beta testing~~ alpha testing release.
 
 Some pointers on items which are obviously out of place or ugly or otherwise poorly designed/implemented would be most welcome.
@@ -34,17 +33,15 @@ The following input variables are used in most of these processors.
 | *_export_properties        | A dictionary of properties to export as autopkg variables                          | The default value differs depending on the processor.[See Below](#export_properties) |
 
 # Processors
-
-The following processors are currently part of this sub group. The names should be intuitive as to their intended purpose.
+The following processors are currently part of this sub group. The names should be intuitive as to their intended purpose
 
 ## McmAppGetter
-
 Get an application object from MCM.
 
-### Input Variables
+### McmAppGetter Input Variables
 
-| Variable Name                    | Description                                               | Default Value                                                                                                                                                                                                                                                                                                                                                                               |
-| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
 | keychain_password_service        | [See Above](#common-input-variables)                         | com.github.autopkg.iancohn-recipes.mcmapi                                                                                                                                                                                                                                                                                                                                                   |
 | keychain_password_username       | [See Above](#common-input-variables)                         | `<None>`                                                                                                                                                                                                                                                                                                                                                                                  |
 | mcm_site_server_fqdn             | [See Above](#common-input-variables)                         | `<None>`                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -54,9 +51,9 @@ Get an application object from MCM.
 Dynamic depending upon the configuration of the **mcm_app_getter_export_properties** input variable
 
 ## McmApplicationUploader
-AutoPkg Processor to connect to an MCM AdminService and retrieve an application object, if it exists
+Connect to an MCM AdminService and retrieve an application object, if it exists
 
-### Input Variables
+### McmApplicationUploader Input Variables
 | Variable Name                    | Description                                               | Default Value                                                                                                                                                                                                                                                                                                                                                                               |
 | -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | keychain_password_service        | [See Above](#common-input-variables)                         | com.github.autopkg.iancohn-recipes.mcmapi                                                                                                                                                                                                                                                                                                                                                   |
@@ -72,19 +69,41 @@ Dynamic depending upon the configuration of the **mcm_app_uploader_export_proper
 
 ## McmObjectMover
 
+### McmObjectMover Input Variables
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
+| keychain_password_service | [See Above](#common-input-variables) | com.github.autopkg.iancohn-recipes.mcmapi |
+| keychain_password_username | [See Above](#common-input-variables) | `<None>` |
+| mcm_site_server_fqdn | [See Above](#common-input-variables) | `<None>` |
+| object_class | The class of the object to move | `<None>` |
+| object_key | The object key of the object that will be moved | `%app_model_name%` |
+| current_object_path | The current path of the object. If not populated, McmObjectMover will query MCM | `<None>` |
+| target_object_path | The target location for the object | `<None>` |
+
 ## McmScopeSetter
+
+### McmScopeSetter Input Variables
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
+| keychain_password_service | [See Above](#common-input-variables) | com.github.autopkg.iancohn-recipes.mcmapi |
+| keychain_password_username | [See Above](#common-input-variables) | `<None>` |
+| mcm_site_server_fqdn | [See Above](#common-input-variables) | `<None>` |
+| object_key | The object key of the object that will be moved | `%app_model_name%` |
+| security_scopes | A list of at least one security scope to set on the object | `<None>` |
+| action | The action to take on the supplied object and security scopes (`add`, `remove`, `replace`)| `replace` |
+| existing_security_scopes | The existing security scopes attached to the item. | %app_securityscopes%
 
 ## McmSDMPackageXMLGenerator
 Generate an SDMPackageXML string which represents an MCM Application object.
 
-### Input Variables
+### McmSDMPackageXMLGenerator Input Variables
 
-| Variable Name                    | Description                                               | Default Value                                                                                                                                                                                                                                                                                                                                                                               |
-| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
 | keychain_password_service        | [See Above](#common-input-variables)                         | com.github.autopkg.iancohn-recipes.mcmapi                                                                                                                                                                                                                                                                                                                                                   |
 | keychain_password_username       | [See Above](#common-input-variables)                         | `<None>`                                                                                                                                                                                                                                                                                                                                                                                  |
 | mcm_site_server_fqdn             | [See Above](#common-input-variables)                         | `<None>`                                                                                                                                                                                                                                                                                                                                                                                  |
-| mcm_application_configuration | [See Below](#mcm_application_configuration)
+| mcm_application_configuration | [See Below](#mcm_application_configuration) | `<None>`
 
 ### Output Variables
 # Complex input variables
@@ -122,10 +141,10 @@ The mcm_application_configuration input variable is really the core of this suit
 | SupportContacts | A list of user ids to enter as the Support Contacts for this application object | list(string) | no | a list of any (reasonable) number of user ids | `<None>` |
 | OptionalReference | A string to enter for the Optional Reference for the application object. | string | no | any string | `<None>` |
 | SendToProtectedDP | If True, enables the 'On demand distribution' checkbox | Boolean | no | `False`, `True`| `False` | 
-| AutoInstall | If True, enables the application to be installed from a Task Sequence without being deployed | boolean | no | `False` |
+| AutoInstall | If True, enables the application to be installed from a Task Sequence without being deployed | boolean | no | `False`, `True` | `False` |
 | DefaultLanguage | The default language of the application | string | no | any valid language abbreviation | `en-US` |
-| LocalizedDisplayName | A display name to display to users in Software Center/Company Portal if the application is deployed as 'Available' | string | no | Defaults to the value of the **Name** key above |
-| LocalizedDescription | A description to display to users in Software Center/Company Portal if the application is deployed as 'Available' | string | no | Defaults to the value of the **Description** key above |
+| LocalizedDisplayName | A display name to display to users in Software Center/Company Portal if the application is deployed as 'Available' | string | no | Defaults to the value of the &nbsp;**Name** key above | `<None>` |
+| LocalizedDescription | A description to display to users in Software Center/Company Portal if the application is deployed as 'Available' | string | no | Defaults to the value of the &nbsp;**Description** key above | `<None>` |
 | IconFileUnixPath | A valid unix path to a file to use as the icon. Supports PNG files up to 512x512 | string | no | any valid unix path | `<None>` |
 | Keyword | A list of keywords a user may search Software Center/Company Portal for when searching for this application | list(string) | no | a list of any (reasonable) number of strings | `<None>` |
 | UserCategories | A list of User Categories to display the application under in Software Center/Company Portal when it is deployed as 'Available' | list(string) | no | a list of any (reasonable) number of strings which match categories which exist in MCM | '<None>' |
@@ -133,12 +152,12 @@ The mcm_application_configuration input variable is really the core of this suit
 | PrivacyUrl | The privacy policy url to display to users for the application | string | no | any url string | `<None>` |
 | UserDocumentation | The user documentation url to display to users for the application | string | no | any url string | `<None>` |
 | IsFeatured | Whether or not to feature the application in Software Center/Company Portal where it is deployed as Available | boolean | no | `False`,`True` | `False` |
-| DisplayInfo | A list of dictionary objects conforming to the  DisplayInfo dictionary format &nbsp;[See below](#displayinfo) | list(dictionary) | no | A default display info will be created from the information above. |
+| DisplayInfo | A list of dictionary objects conforming to the  DisplayInfo dictionary format &nbsp;[See below](#displayinfo) | list(dictionary) | no | A default display info will be created from the information above. | `<None>` |
 | Publisher | The publisher for the application | string | no | any string | `<None>` |
 | ReleaseDate | The release date of the application | string | no | `mm/dd/yyyy` formatted date | `<None>` |
 | SoftwareVersion | The version of the application | string | no | any version string | `<None>` |
-| PersistUnhandledDeploymentTypes | Whether to retain deployment types not configured in this dictionary when updating an application rather than creating a new object | boolean | no | `False` |
-| DeploymentTypes | A list of dictionary objects conforming to the DeploymentType dictionary format &nbsp;[See below](#deploymenttype) | list(dictionary) | any number of properly configured dictionaries | `<None>`
+| PersistUnhandledDeploymentTypes | Whether to retain deployment types not configured in this dictionary when updating an application rather than creating a new object | boolean | no | `False`, `True` | `False` |
+| DeploymentTypes | A list of dictionary objects conforming to the DeploymentType dictionary format &nbsp;[See below](#deploymenttype) | list(dictionary) | no | any number of properly configured dictionaries | `<None>`
 
 ### DisplayInfo
 The DisplayInfo key of the [mcm_application_configuration](#mcm_application_configuration) root node can be populated with an array of localized display information objects conforming to the below standard. By default, properties will inherit their values from the default language and root application object. Most properties can be overridden, or set to `Null` or an empty string if they should be left blank.
@@ -158,14 +177,247 @@ DeploymentType objects can be somewhat tricky since the available possible value
 
 | Key | Description | Type | Required | Possible Values | Default Value |
 | --- | ----------- | ---- | -------- | --------------- | ------------- |
-| Technology | The deployment technology type | yes | `Script`, `MSI`, (`TaskSequence` - **Not yet supported**), (`Windows8App` - **Not yet supported**) | `<None>` |
-| Priority | 
+| Technology | The deployment technology type | string | yes | `Script`, `MSI`, (`TaskSequence` - **Not yet supported**), (`Windows8App` - **Not yet supported**) | `<None>` |
+| Priority | Explicitly define the ordering of deployment types [See below](#property-notes) | int | no | any int | `<None>` |
+| Options | A nested dictionary with properties specific to the deployment technology | dictionary | yes | [See below](#deployment-technology-options) | `<None>` |
 
-
-#### Notes
+#### Property Notes
 * Priority
-In most cases where you are only creating a new application and creating a single deployment type, can be left as Null or ommitted entirely from the dictionary. In more complex scenarios, the following behaviors can be configured where PersistUnhandledDeploymentTypes is set to `True` (setting it to False causes any existing deployment types to be dropped from the updated application object)
+In most cases where you are only creating a new application and creating a single deployment type, can be left as Null or ommitted entirely from the dictionary. Even when creating a new app, by default, deployment types will be assigned a priority respective to their order in this list.
+In more complex scenarios when 'Updating' an application object, the following behaviors can be configured where PersistUnhandledDeploymentTypes is set to `True` (setting it to False causes any existing deployment types to be dropped from the updated application object)
   - Configuring Priority to 'null' declares the following intent:
     - If the deployment type already exists, and BehaviorIfExists is set to 'Update', it will maintain its current priority.
-    - If the deployment type does not already exist, or if it exists and BehaviorIfExists is set to 'AppendVersion' or 'AppendIndex', it will be added to the end in the order in which it appears here.
-  - Configuring Priority to an integer will cause the deployment types on an existing application to be re-ordered depending on the configuration. For example, configuring DeploymentType list objects with priorities 1, 3, and 5 would cause 2 existing deployment types to be interlaced into positions 2 and 4.
+    - If the deployment type does not already exist, or if it exists and the deployment type's BehaviorIfExists property is set to 'AppendVersion' or 'AppendIndex', it will be added to the end in the order in which it appears here.
+  - Configuring Priority to a non null value will cause the deployment type to be re-ordered depending on the configuration. For example, configuring DeploymentType list objects with priorities 1, 3, and 5 would cause 2 existing deployment types which are not configured in this configuration to be interlaced into positions 2 and 4.
+
+  When in doubt, just leave it Null
+
+### Deployment Technology Options
+#### Common Deployment Type Options Properties
+The following properties are common to at least two deployment technology types.
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| DeploymentTypeName | The name of the deployment type | string | yes | any string | `Install` |
+| BehaviorIfExists | How to handle an existing deployment type on the application with the same name | string | yes | `Update`, `Skip`, `Exit`, `AppendVersion`, `AppendIndex` | `<None>` |
+| AdministratorComment | A comment to describe the deployment type for MCM administrators | string | no | any string | `<None>` |
+| Languages | A list of strings representing the languages to which this deployment type applies | list(string) | no | string list values must be valid language abbreviations | `<None>` |
+| AllowUninstall | Whether to allow the user to uninstall the Application (if deployed as 'Available') | boolean | no | `False`,`True` | `False` |
+| InstallProcessDetection | A list of dictionaries defining processes which must be closed prior to running this deployment type. [See below](#install-process-detection) | dictionary | no | any valid process detection configuration dictionary | `<None>` |
+| ContentLocation | The path (likely UNC) to the folder of content that will be used for this deployment type | string | no | any string | `<None>` |
+| ContentLocation_Local | The local path to the application's installation content (eg. `/Volumes/MyShare/MyContent`) | string | yes, if specifying content | any valid local path | `<None>` |
+| PersistContentInClientCache | Whether to keep the content on the client indefinitely after the installation completes | boolean | no | `False`,`True` | `False` |
+| SourceUpdateProductCode | The GUID of the application | string | no | any guid | `<None>` |
+| InstallationProgram | The command which begins the installation | string | yes | any string | `<None>` |
+| InstallationStartIn | The folder where the installation should begin, if different from the content folder | string | no | Any valid path on the target client system | `<None>` |
+| Force32BitInstaller | Whether install/uninstall/repair commands should run as a 32 bit process on 64 bit systems | boolean | no | `False`,`True` | `False` |
+| RequiresUserInteraction | Allow the user to interact with the installer process | boolean | no | `False`,`True` | `False` |
+| UninstallProgram | The command which begins the uninstall process | string | no | any string | `<None>` |
+| UninstallStartIn | The folder where the uninstall should begin, if different from the content folder | string | no | Any valid path on the target client system | `<None>` |
+| UninstallSetting | Describes the content requirement for the uninstall action | string | no | `SameAsInstall`, `NoneRequired`, `Different` | `SameAsInstall` |
+| UninstallContentLocation | The path (likely UNC) to the folder of content that will be used for this deployment type's uninstall action | string | no | any string | `<None>` |
+| UninstallContentLocation_Local | The local path to the application's uninstall content (eg. `/Volumes/MyShare/MyContent`) | string | yes, if specifying content | any valid local path | `<None>` |
+| RepairProgram | The command which begins the repair process | string | no | any string | `<None>` |
+| RepairStartIn | The folder where the repair action should begin | string | no | Any valid path on the target client system | `<None>` |
+| InstallationProgramVisibility | Whether to display the UI for the install process to the user | string | no | `Normal`,`Minimized`,`Maximized`,`Hidden` | `Hidden` |
+| LogonRequirementType | Describes the logon requirement. [See below](#logon-requirement-type-notes) | string | no | `OnlyWhenUserLoggedOn`, `WhetherOrNotUserLoggedOn`, `OnlyWhenNoUserLoggedOn` | `WhetherOrNotUserLoggedOn` |
+| InstallationBehaviorType | The context in which to install the application | string | no | `InstallForSystem`,`InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser`, `InstallForUser` | `InstallForSystem` |
+| RebootBehavior | The reboot behavior of the deployment type | string | no | `BasedOnExitCode`, `NoAction`, `ProgramReboot`, `ForceReboot` | `BasedOnExitCode` |
+| MaximumAllowedRuntimeMins | How many minutes the installation should be allowed to run for before killing the process | int | no | any positive integer between 15 and 1440 (keeping maintenance windows in mind) | 120 |
+| EstimatedInstallationTimeMins | The expected number of minutes the installation should take on healthy clients | int | no | any int | 0 |
+| OnSlowNetworkMode | Content download behavior when on a slow network | string | no | `Download`, `DoNothing` | `Download` |
+| OnFastNetworkMode | Content download behavior when on a fast network | string | no | `Download`, `DoNothing` | `Download` |
+| Requirements | A list of dictionaries defining the requirements for this deployment type to be applicable to target systems [See below](#requirements-rules) | list(dictionary) | no | any number of valid requirements dictionaries | `<None>` |
+| DependencyGroups | A list of one or more dependency groups dictionaries [See below](#dependency-groups). Each dependency group is functionally connected with a logical `and` operator, meaning that ALL dependency groups must evaluate to `True` for dependencies to be satisfied and for the deployment type to execute. | dictionary | no | any number of valid dependency group definitions | `<None>` |
+| KeepDefaultReturnCodes | By default MCM will look for common return codes (1707, 3010, 1603). If defining custom return codes in the next property, the default return codes can be kept | bool | no | `False`, `True` | `True` |
+| CustomReturnCodes | A list of dictionaries for each return code which needs to be applied [See below](#custom-return-codes) | list(dictionary) | no | any number of custom return code definitions | `<None>` |
+| Detection | A dictionary representing the definition for how MCM should determine whether the application is successfully installed. This is a complex type [See below](#detection) | dictionary | yes | A valid detection definition | `<None>` |
+
+#### Logon Requirement Type Notes
+Not valid for 'InstallForUser' installation behavior.
+'OnlyWhenNoUserIsLoggedOn' is not a valid choice when an installation behavior type of 'InstallForSystemIfResourceIsDeviceOtherwiseInstallForUser' is specified, since that effectively would make it an InstallForSystem installation behavior.
+
+### Install Process Detection
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| ProcessName | The name of the executable file with extension | string | yes | any string | `<None>` |
+| DisplayName | The display name of the process | string | no | any string | `<None>` |
+
+### Requirements Rules
+As it turns out, creating requirements can be somewhat complex depending whether built in or custom (global condition) requirements are used. As a stop gap for this, requirements rules can be defined using a raw xml string from an existing deployment type on another application object and applied to this deployment type.
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Type | The method used to define the requirement | string | yes | `XmlString`, `Dict` | `<None>` |
+| Rule | The rule definition, either as [XmlString](#requirements-from-xml-strings) or [Dict](#requirements-from-dictionaries) | string, (dictionary - **Not Currently Supported**) | yes | A valid object | `<None>` |
+
+### Requirements From XML Strings
+This was easier to implement relative to to the alternative which would have to make several queries to MCM to search for global condition ids, then figure out how to construct the object from these.
+
+**Example:**
+```xml
+<rule><Annotation>
+  <DisplayName Text="Lots of operating systems" />
+  <Description Text="" />
+</Annotation>
+<OperatingSystemExpression>
+  <Operator>OneOf</Operator>
+  <Operands>
+    <RuleExpression RuleId="Windows/All_x64_Windows_7_Client" />
+    <RuleExpression RuleId="Windows/All_x86_Windows_7_Client" />
+    <RuleExpression RuleId="Windows/x64_Windows_7_Client" />
+    <RuleExpression RuleId="Windows/x64_Windows_7_SP1" />
+    <RuleExpression RuleId="Windows/x86_Windows_7_Client" />
+    <RuleExpression RuleId="Windows/x86_Windows_7_SP1" />
+    <RuleExpression RuleId="Windows/All_ARM64_Windows_10_and_higher_Clients" />
+    <RuleExpression RuleId="Windows/All_MultiSession_Enterprise_Windows_10_higher" />
+    <RuleExpression RuleId="Windows/All_x64_Windows_10_and_higher_Clients" />
+    <RuleExpression RuleId="Windows/All_x86_Windows_10_and_higher_Clients" />
+    <RuleExpression RuleId="Windows/All_ARM64_Windows_11_and_higher_Clients" />
+    <RuleExpression RuleId="Windows/All_MultiSession_Enterprise_Windows_11_higher" />
+    <RuleExpression RuleId="Windows/All_x64_Windows_11_and_higher_Clients" />
+  </Operands>
+</OperatingSystemExpression>
+</rule>
+
+```
+
+### Requirements From Dictionaries
+Not currently supported
+
+### Dependency Groups
+A valid dependency group will have one or more dependency. You cannot create a dependency group with 0 dependencies. All dependencies within a dependency group are functionally connected by a logical `or` operator, meaning that if ANY of the detections on the deployment types referenced in the dependency groups evaluate as installed, the dependency group itself will evaluate to `True`
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| DependencyGroupName | The name of the dependency group | string | yes | any string | `<None>` |
+| Dependencies | A list of one or more individual dependencies [See below](#dependencies) | dictionary | yes | any number of valid dependency definitions | `<None>` | 
+
+### Dependencies
+Each dependency is defined by a dictionary with the properties below
+
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Priority | The priority order of the dependency within the group | int | yes | any int > 0 | `<None>` |
+| Application Name | The application name (must be precise) | string | yes | any string | `<None>` |
+| AutoInstall | Whether to install this dependency if it is not detected | boolean | no | `False`, `True` | `False` |
+| DeploymentTypeFilter | The string to match the deployment type name against | string | no (if singleton deployment type, it will be selected) | any string | `<None>` |
+| DeploymentTypeFilterType | How to match against the DeploymentTypeFilter string | string | yes | `StartsWith`, `Contains`, `Equals` | `<None>` |
+
+### Custom Return Codes
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| ReturnCode | The numeric exit code to define | int | yes | any int > 0 | `<None>` |
+| CodeType | The return code type | string | yes | `Success`, `Failure`, `HardReboot`, `Reboot`, `FastRetry` | `<None>` |
+| Name | A friendly name for the return code | string | no | any string | `<None>` |
+| Description | A description for the return code | string | no | any string | `<None>` |
+
+### Detection
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Type | What type of detection this is [See below](#detection-type-notes) | string | yes | `File`, `Folder`, `RegistryKey`, `RegistryKeyValue`, `MSI`, `Group`, `CustomScript` | `<None>` |
+| Options | A dictionary of options consistent with the Type property [See below](#detection-type-notes) | dictionary | yes | A dictionary valid for the given detection type | `<None>` |
+
+#### Detection Type Notes
+There are two main categories of detection types:
+* **[Custom Script(#custom-script-detection-options)]** (CustomScript) - Detect a successful installation with a PowerShell script
+PowerShell scripts which detect the installation will:
+  * Output a single string (any string) if the application is installed. To indicate that the application is not installed, the script MUST NOT write out any string (or any object castable as a string)
+  * Exit with a '0' exit code. Exiting with a non-zero exit code will cause detection to fail with an error, rather than detecting that the application is or is not installed
+ 
+* **Enhanced Detection Expression** - enhanced detection expressions can be one of five types
+  * **[Group Expression](#group-detection-options)** - (Group)
+  * **[File](#file-detection-options)** - (File)
+  * **[Folder](#folder-detection-options)** - (Folder)
+  * **[Registry Key](#registry-key-detection-options)** - (RegistryKey)
+  * **[Registry Key Value](#registry-key-value-detection-options)** - (RegistryKey)
+  * **[MSI](#msi-detection-options)** - (MSI)
+
+> :information_source: **Important Note:** If evaluating a property on any of the above detection methods, *Property*, *Operator*, and *Value* must all be populated. This applies to File, Folder, MSI, and RegistryKeyValue expression types
+
+### Custom Script Detection Options
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| ScriptType | The script language. Technically JScript and VBScript are supported by MCM, but this should ALWAYS be set to 'PowerShell' | string | yes | `PowerShell`, ~~`VBScript`~~, ~~`JScript`~~ | `PowerShell` |
+| ScriptContent | The PowerShell script represented as a string | string | yes | any valid PowerShell script as a string | `<None>` |
+| RunAs32Bit | If `True`, the script will run using 32 bit PowerShell | boolean | no | `False`, `True` | `False` |
+
+### Group Detection Options
+Group expressions evaluate two or more [enhanced detection expressions](#detection-type-notes). Items in a group are connected by either 'and' or 'or' logical operators. Group expressions may contain nested group expressions, and may connect via their operator with either another group type expression or a single expression (eg. File)
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Operator | The logical operator to connect items in the Items list | string | yes | `And`, `Or` | `<None>` |
+| Items | A list of at least two enhanced detection expressions to evaluate | list(dictionary) | yes | Two or more valid enhanced detection expressions | `<None>` |
+
+### File Detection Options
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Is64Bit | If `False`, the file is associated with a 32 bit application on 64 bit systems | boolean | yes | `False`, `True` | `<None>` |
+| Path | The parent folder path | string | yes | Any valid path on the target client system | `<None>` |
+| Filter | The file name | string | yes | any string | `<None>` |
+| Property | Optionally, evaluate the file properties within this detection | string | no | `Size`, `Version`, `DateCreated`, `DateModified` | `<None>` |
+| Operator | The comparison operator for the value returned from the file property | string | no | `Equals`, `NotEquals`, `GreaterThan`, `LessThan`, `Between`, `GreaterEquals`, `LessEquals`, `OneOf`, `NoneOf` [See below - not all operators are valid for all properties](#file-property-comparison-operator-notes) | `<None>` | 
+| Value | The value or list of values to compare the file property value against | list(string) or string | no | any string (or list of strings if the operator is an array operator) | `<None>` |
+
+#### File Property Comparison Operator Notes
+The following operators evaluate against an array of values:
+* Between
+* OneOf
+* NoneOf
+When using an array operator, the Value property should be a list of at least two version strings.
+If using the 'Between' operator, there must be exactly two version strings.
+
+Non-array operators require 'Value' to be populated with a single string
+
+### Folder Detection Options
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Is64Bit | If `False`, the file is associated with a 32 bit application on 64 bit systems | boolean | yes | `False`, `True` | `<None>` |
+| Path | The parent folder path | string | yes | Any valid path on the target client system | `<None>` |
+| Filter | The file name | string | yes | any string | `<None>` |
+| Property | Optionally, evaluate the file properties within this detection | string | no | `DateCreated`, `DateModified` | `<None>` |
+| Operator | The comparison operator for the value returned from the file property | string | no | `Equals`, `NotEquals`, `GreaterThan`, `LessThan`, `Between`, `GreaterEquals`, `LessEquals`, `OneOf`, `NoneOf` [See below - not all operators are valid for all properties](#file-property-comparison-operator-notes) | `<None>` | 
+| Value | The value or list of values to compare the file property value against | list(string) or string | no | any string (or list of strings if the operator is an array operator) | `<None>` |
+
+### Registry Key Detection Options
+Registry key detection is a simple existance check on the registry key, and cannot evaluate any properties on the key.
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Hive | The Registry hive to examine | string | yes | `HKEY_CLASSES_ROOT`, `HKEY_CURRENT_CONFIG`, `HKEY_CURRENT_USER`, `HKEY_LOCAL_MACHINE`, `HKEY_USERS` | `<None>` |
+| Key | The path to the registry key. Wildcards are not supported | string | yes | any valid registry path | `<None>` |
+| Is64Bit | If `False`, the file is associated with a 32 bit application on 64 bit systems | boolean | yes | `False`, `True` | `<None>` |
+
+### Registry Key Value Detection Options
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| Hive | The Registry hive to examine | string | yes | `HKEY_CLASSES_ROOT`, `HKEY_CURRENT_CONFIG`, `HKEY_CURRENT_USER`, `HKEY_LOCAL_MACHINE`, `HKEY_USERS` | `<None>` |
+| Key | The path to the registry key. Wildcards are not supported | string | yes | any valid registry path | `<None>` |
+| ValueName | The name of the registry value to examine | string | yes | any string | `<None>` |
+| DateType | The data type of the value data that will be retrieved from the registry value | string | no | `String`, `Version`, `Integer` | `<None>` |
+| Operator | The comparison operator for the data returned from the registry value | string | no | `Equals`, `NotEquals`, `GreaterThan`, `LessThan`, `Between`, `GreaterEquals`, `LessEquals`, `OneOf`, `NoneOf` [See below - not all operators are valid for all data types](#registry-value-data-comparison-operator-notes) | `<None>` |
+| Value | The value or list of values to compare the retrieved registry value data against [See below](#registry-value-data-comparison-operator-notes)| list(string) or string | no | any string (or list of strings if the operator is an array operator) | `<None>` |
+| Is64Bit | If `False`, the file is associated with a 32 bit application on 64 bit systems | boolean | yes | `False`, `True` | `<None>` |
+
+#### Registry Value Data Comparison Operator Notes
+If comparing a registry value a 'String' DataType, the following comparison operators may be used
+* Equals
+* NotEquals
+* BeginsWith
+* NotBeginsWith
+* EndsWith
+* NotEndsWith
+* Contains
+* NotContains
+* OneOf
+* NoneOf
+
+Additionally, the notes listed under [File Property Comparison Operator Notes](#file-property-comparison-operator-notes) apply here as well.
+
+### MSI Detection Options
+| Key | Description | Type | Required | Possible Values | Default Value |
+| --- | ----------- | ---- | -------- | --------------- | ------------- |
+| ProductCode | The MSI product code to search for | string | yes | any valid MSI product code | `<None>` |
+| Operator | The comparison operator to use | string | no | `Equals`, `NotEquals`, `GreaterThan`, `GreaterEquals`, `LessThan`, `LessEquals` | `<None>` |
+| Property | The MSI Property to evaluate (always ProductVersion) | string | no | `ProductVersion` | `<None>` |
+| Value | The value to compare the property value against | string | no | any string | `<None>` |
