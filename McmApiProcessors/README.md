@@ -105,7 +105,14 @@ Generate an SDMPackageXML string which represents an MCM Application object.
 | mcm_site_server_fqdn             | [See Above](#common-input-variables)                         | `<None>`                                                                                                                                                                                                                                                                                                                                                                                  |
 | mcm_application_configuration | [See Below](#mcm_application_configuration) | `<None>`
 
-### Output Variables
+### McmSDMPackageXMLGenerator Output Variables
+| Variable Name | Description |
+| ------------- | ----------- |
+| SDMPackageXML | Serialized XML string representing an application object. |
+| mcm_scope_id | The authoring scope id for objects in the target MCM site. |
+| mcm_application | A dictionary representation of the mcm application |
+| mcm_application_ci_id | The CI_ID where the application should be posted. 0 indicates a new application. |
+
 # Complex input variables
 
 ## export_properties
