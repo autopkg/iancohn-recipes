@@ -270,6 +270,9 @@ class MSStoreDownloader(URLGetter):
                 if file_match_string not in detail[filename_index]:
                     self.output(f"{detail[filename_index]} appears to be for an older version. Skipping it.", 4)
                     continue
+            elif self.env.get('download_dependencies') == False:
+                self.output(f"{detail[filename_index]} is a dependency and download_dependencies was evaluated 'False'. Skipping it.")
+                continue
             else:
                 n_dependencies += 1
             n_files_needed += 1
