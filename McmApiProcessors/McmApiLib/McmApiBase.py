@@ -298,7 +298,7 @@ class XmlNodeAsDict(dict):
         else:
             self['ChildNodes'] = []
         if NodeInnerText is not None and str(NodeInnerText) > '':
-            self['NodeInnerText'] = NodeInnerText
+            self['NodeInnerText'] = str(NodeInnerText)
         self["xml_declaration"] = xml_declaration
         self["nsmap"] = nsmap if nsmap is not None else {}
         XmlNodeAsDict.instance_map[f"{id(self)}"] = self
