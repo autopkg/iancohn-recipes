@@ -875,9 +875,12 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
         else:
             params["ChildNodes"] = []
             if isinstance(arg_value, str):
+                self.output("Argument value appears to be simple string", 3)
                 params["ChildNodes"].append(XmlNodeAsDict(NodeName = 'Item', NodeInnerText = arg_value))
             elif isinstance(arg_value, list):
+                self.output("Argument value appears to be a list", 3)
                 for i in arg_value:
+                    self.output(f"Appending item: {i.__str__()}")
                     params["ChildNodes"].append(XmlNodeAsDict(NodeName = 'Item', NodeInnerText = i.__str__()))
             else:
                 raise ValueError("Invalid value supplied for arg_value.")
@@ -932,8 +935,12 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
             detect_action_params['provider'] = 'Script'
             detect_action_params['args'].append(self.new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context))
             detect_action_params['args'].append(self.new_arg(arg_name = 'ScriptType', arg_type = 'Int32', arg_value = '0'))
-            detect_action_params['args'].append(self.new_arg(arg_name = 'ScriptBody', arg_type = 'String', arg_value = detection_item.get('Options', {}).get('ScriptContent', '')))
-            detect_action_params['args'].append(self.new_arg(arg_name = 'RunAs32Bit', arg_type = 'Boolean', arg_value = bool(detection_item.get('Options', {}).get('RunAs32Bit') or False)).__str__().lower())
+            script_body_arg = self.new_arg(arg_name = 'ScriptBody', arg_type = 'String', arg_value = detection_item.get('Options', {}).get('ScriptContent', ''))
+            self.output(f"ScriptBody arg: {json.dumps(script_body_arg)}", 3)
+            detect_action_params['args'].append(script_body_arg)
+            runas_arg = self.new_arg(arg_name = 'RunAs32Bit', arg_type = 'Boolean', arg_value = bool(detection_item.get('Options', {}).get('RunAs32Bit') or False)).__str__().lower()
+            self.output(f"RunAs arg: {json.dumps(runas_arg)}", 3)
+            detect_action_params['args'].append(runas_arg)
             custom_data_nodes.append(XmlNodeAsDict(NodeName = 'DetectionMethod', NodeInnerText = 'Script'))
             custom_data_nodes.append(XmlNodeAsDict(
                 NodeName = 'DetectionScript', 
