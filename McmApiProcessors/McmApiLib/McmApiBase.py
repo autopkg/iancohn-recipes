@@ -74,7 +74,7 @@ def is_empty(object: any) -> bool:
         return True
     elif isinstance(object,bool):
         return ([False,True].__contains__(object) == False)
-    elif isinstance(object,str) == 'str':
+    elif isinstance(object,str):
         return (object == '')
     elif isinstance(object,dict):
         return (object == {})
