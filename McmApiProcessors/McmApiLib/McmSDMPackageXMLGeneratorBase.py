@@ -928,7 +928,7 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
             "action_type": "DetectAction", 
             "args": []
         }
-        if detection_type == 'CustomScript':
+        if detection_type.name == 'CustomScript':
             detect_action_params['provider'] = 'Script'
             detect_action_params['args'].append(self.new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context))
             detect_action_params['args'].append(self.new_arg(arg_name = 'ScriptType', arg_type = 'Int32', arg_value = '0'))
