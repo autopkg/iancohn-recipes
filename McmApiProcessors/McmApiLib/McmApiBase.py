@@ -69,6 +69,18 @@ def setup_credential():
 
 setup_credential()
 
+def is_empty(object: any) -> bool:
+    if object is None:
+        return True
+    elif isinstance(object,bool):
+        return ([False,True].__contains__(object) == False)
+    elif isinstance(object,str) == 'str':
+        return (object == '')
+    elif isinstance(object,dict):
+        return (object == {})
+    else:
+        raise TypeError(f"Type ({type(object).__name__}) unhandled by is_empty")
+
 __all__ = ["McmApiBase"]
 # Enums
 class ProgramVisibility(Enum):
@@ -297,8 +309,9 @@ class XmlNodeAsDict(dict):
             self['ChildNodes'] = ChildNodes
         else:
             self['ChildNodes'] = []
-        if NodeInnerText is not None and str(NodeInnerText) > '':
-            self['NodeInnerText'] = str(NodeInnerText)
+        
+        if is_empty(NodeInnerText) == False:
+            self['NodeInnerText'] = NodeInnerText
         self["xml_declaration"] = xml_declaration
         self["nsmap"] = nsmap if nsmap is not None else {}
         XmlNodeAsDict.instance_map[f"{id(self)}"] = self
