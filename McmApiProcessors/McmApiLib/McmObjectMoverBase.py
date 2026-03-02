@@ -16,28 +16,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import requests
 
-from autopkglib import (  # pylint: disable=import-error
-    ProcessorError,
-)
+import os.path
+import platform
+import sys
 
 # to use a base/external module in AutoPkg we need to add this path to the sys.path.
 # this violates flake8 E402 (PEP8 imports) but is unavoidable, so the following
 # imports require noqa comments for E402
-import os.path
-import sys
 
 sys.path.insert(0,os.path.dirname(__file__))
 from McmApiLib.McmApiBase import ( #noqa: E402
     McmApiBase,
 )
 
+platform_name = platform.system().lower()
+arch = platform.machine().lower()
+vendor_path = os.path.join(os.path.dirname(__file__),"vendor",platform_name,arch)
+if vendor_path not in sys.path:
+    sys.path.insert(0, vendor_path)
+
+import requests
+
+from autopkglib import (  # pylint: disable=import-error
+    ProcessorError,
+)
+
 class McmObjectMoverBase(McmApiBase):
     """Move an object between folders in MCM"""
     def initialize_all(self):
         self.initialize_headers()
-        self.initialize_ntlm_auth()
+        self.initialize_auth()
         self.initialize_ssl_verification()
         self.initialize_export_properties("mcm_app_uploader_export_properties")
         self.fqdn = self.env.get('mcm_site_server_fqdn')
@@ -59,7 +68,7 @@ class McmObjectMoverBase(McmApiBase):
         sms_secured_category_membership = requests.request(
             method = 'GET',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
         )
@@ -82,7 +91,7 @@ class McmObjectMoverBase(McmApiBase):
         sms_container_nodes_response = requests.request(
             method = 'GET',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = False,
         )
@@ -111,7 +120,7 @@ class McmObjectMoverBase(McmApiBase):
             revision_response = requests.request(
                 method = 'GET',
                 url = revision_url,
-                auth = self.get_mcm_ntlm_auth(),
+                auth = self.get_mcm_auth(),
                 headers = self.headers,
                 verify = False,
             )
@@ -172,7 +181,7 @@ class McmObjectMoverBase(McmApiBase):
         self.output(f"Request parameters: {print(body)}",4)
         move_response = requests.request(
             method = 'POST',
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             url = url,
             headers = self.headers,
             json = body,

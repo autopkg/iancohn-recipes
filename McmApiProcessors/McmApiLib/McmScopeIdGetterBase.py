@@ -17,7 +17,10 @@
 # limitations under the License.
 
 import platform
-import requests
+
+from autopkglib import (  # pylint: disable=import-error
+    ProcessorError,
+)
 
 # to use a base/external module in AutoPkg we need to add this path to the sys.path.
 # this violates flake8 E402 (PEP8 imports) but is unavoidable, so the following
@@ -25,16 +28,10 @@ import requests
 import os.path
 import sys
 
-platform_name = platform.system().lower()
-arch = platform.machine().lower()
-vendor_path = os.path.join(os.path.dirname(__file__),"vendor",platform_name,arch)
-if vendor_path not in sys.path:
-    sys.path.insert(0, vendor_path)
-
-import keyring
-from requests_ntlm import HttpNtlmAuth
-
-from autopkglib import Processor, ProcessorError
+sys.path.insert(0,os.path.dirname(__file__))
+from McmApiLib.McmApiBase import ( #noqa: E402
+    McmApiBase
+)
 
 def setup_credential():
     system = platform.system()
@@ -55,7 +52,7 @@ setup_credential()
 
 __all__ = ["McmScopeIdGetter"]
 
-class McmScopeIdGetter(Processor):
+'''class McmScopeIdGetter(McmApiBase):
     description = """AutoPkg Processor to connect to an MCM Admin Service and retrieve the site's scope id."""
     input_variables = {
         "keychain_password_service": {
@@ -158,3 +155,4 @@ class McmScopeIdGetter(Processor):
 if __name__ == "__main__":
     processor = McmScopeIdGetter()
     processor.execute_shell()
+'''

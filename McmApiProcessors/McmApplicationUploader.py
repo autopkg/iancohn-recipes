@@ -57,6 +57,12 @@ class McmApplicationUploader(McmApplicationUploaderBase):
                 "path to a CA bundle to use",
             "default": False
         },
+        "krb_config_type": {
+            "required": False,
+            "description": "How to generate the kerberos configuration.",
+            "options": ["auto","query","custom"],
+            "default": ["auto"]
+        },
         "mcm_application_ci_id": {
             "required": False,
             "description": "The CI_ID to post the application to. If not specified, or if '0', a new application will be created.",

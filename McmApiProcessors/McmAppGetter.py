@@ -57,6 +57,13 @@ class McmAppGetter(McmAppGetterBase):
                 "path to a CA bundle to use",
             "default": False
         },
+        "krb_config_type": {
+            "required": False,
+            "description": "How to generate the kerberos configuration.",
+            "options": ["auto","query","custom"],
+            "default": ["auto"]
+        },
+        #krb_config_path
         "application_name": {
             "required": True,
             "description": "The name of the application in MCM to search for."
