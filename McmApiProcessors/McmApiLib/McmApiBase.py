@@ -869,11 +869,11 @@ class McmApiBase(Processor):
         
         if os.path.exists(self._krb5_config):
             self.output("Deleting temporary KRB5_CONFIG", 3)
-            _ = os.unlink(self._krb5_config)
+            _ = unlink(self._krb5_config)
 
         if os.path.exists(self._krb5ccache):
             self.output('Deleting temporary credential cache', 3)
-            _ = os.unlink(self._krb5ccache)
+            _ = unlink(self._krb5ccache)
     def _build_krb_config(self,realm: str, domain: str, auto_resolve: bool, kdcs: list[str], admin_servers: list[str]) -> str:
         lines = []
         lines.append('[libdefaults]')
@@ -960,7 +960,7 @@ class McmApiBase(Processor):
         pwd_file.write(self.password)
         pwd_file.close()
         self.pwd_file = pwd_file.name
-        atexit.register(os.unlink,pwd_file.name)
+        atexit.register(unlink,pwd_file.name)
 
         ccache = tempfile.mkstemp(suffix='.ccache')
         ccname = f'FILE:{ccache[1]}'
@@ -1095,11 +1095,10 @@ class McmApiBase(Processor):
         elif isinstance(_ssl_verify, str):
             if _ssl_verify.startswith('\\\\'):
                 _ssl_verify = tempfile.mkstemp(suffix='.pem',prefix='ssl_')[1]
-                _ssl_verify = os.path.join(os.path.dirname(__file__),"ssl.pem")
-                atexit.register(unlink,_ssl_verify)
                 self.output(f"Copying remote cert .pem file to {_ssl_verify}", 4)
                 ssl_copy_success = self.try_copy_smb_file_to_local(smb_source_path=self.env.get('mcm_ssl_verification'),local_destination_path=_ssl_verify)
                 self.output(f"SSL Copy succeeded: {ssl_copy_success}", 4)
+                atexit.register(unlink,_ssl_verify)
             else:
                 self.output("SSL path appears to be local")
             self.ssl_verify = str(Path(_ssl_verify).resolve())
@@ -1112,7 +1111,7 @@ class McmApiBase(Processor):
             ):
             self.output("ssl_verify object exists. Returning it", 3)
             return self.ssl_verify
-        self.output("NTLM Auth object does not currently exist. It will be created", 3)
+        self.output("SSL verification setting does not exist. Creating it now.", 3)
         try:
             self.initialize_ssl_verification()
             return self.ssl_verify
