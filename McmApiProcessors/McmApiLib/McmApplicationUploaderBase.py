@@ -16,7 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import requests
 
 from autopkglib import (  # pylint: disable=import-error
     ProcessorError,
@@ -33,11 +32,13 @@ from McmApiLib.McmApiBase import ( #noqa: E402
     McmApiBase,
 )
 
+import requests
+
 class McmApplicationUploaderBase(McmApiBase):
     """Upload an application object"""
     def initialize_all(self):
         self.initialize_headers()
-        self.initialize_ntlm_auth()
+        self.initialize_auth()
         self.initialize_ssl_verification()
         self.initialize_export_properties("mcm_app_uploader_export_properties")
         self.fqdn = self.env.get('mcm_site_server_fqdn')
@@ -55,7 +56,7 @@ class McmApplicationUploaderBase(McmApiBase):
         post_response = requests.request(
             method = 'POST',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
             json = body

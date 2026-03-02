@@ -59,6 +59,12 @@ class McmScopeSetter(McmScopeSetterBase):
                 "path to a CA bundle to use",
             "default": False
         },
+        "krb_config_type": {
+            "required": False,
+            "description": "How to generate the kerberos configuration.",
+            "options": ["auto","query","custom"],
+            "default": ["auto"]
+        },
         "object_key": {
             "required": False,
             "description": "The object key of the object to set security scopes on. Defaults to the value of app_model_name"

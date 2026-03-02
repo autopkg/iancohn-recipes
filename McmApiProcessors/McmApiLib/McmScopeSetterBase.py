@@ -16,7 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import requests
 
 from autopkglib import (  # pylint: disable=import-error
     ProcessorError,
@@ -26,6 +25,7 @@ from autopkglib import (  # pylint: disable=import-error
 # this violates flake8 E402 (PEP8 imports) but is unavoidable, so the following
 # imports require noqa comments for E402
 import os.path
+import platform
 import sys
 
 sys.path.insert(0,os.path.dirname(__file__))
@@ -33,10 +33,18 @@ from McmApiLib.McmApiBase import ( #noqa: E402
     McmApiBase
 )
 
+platform_name = platform.system().lower()
+arch = platform.machine().lower()
+vendor_path = os.path.join(os.path.dirname(__file__),"vendor",platform_name,arch)
+if vendor_path not in sys.path:
+    sys.path.insert(0, vendor_path)
+
+import requests
+
 class McmScopeSetterBase(McmApiBase):
     def initialize_all(self):
         self.initialize_headers()
-        self.initialize_ntlm_auth()
+        self.initialize_auth()
         self.initialize_ssl_verification()
         self.fqdn = self.env.get('mcm_site_server_fqdn')
 
@@ -66,7 +74,7 @@ class McmScopeSetterBase(McmApiBase):
         sms_secured_categories = requests.request(
             method = 'GET',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
         )
@@ -121,7 +129,7 @@ class McmScopeSetterBase(McmApiBase):
             add_response = requests.request(
                 method = 'POST',
                 url = add_url,
-                auth = self.get_mcm_ntlm_auth(),
+                auth = self.get_mcm_auth(),
                 headers = self.headers,
                 json = add_body,
                 verify = self.get_ssl_verify_param()
@@ -149,7 +157,7 @@ class McmScopeSetterBase(McmApiBase):
                 method = 'POST',
                 url = remove_url,
                 headers = self.headers,
-                auth = self.get_mcm_ntlm_auth(),
+                auth = self.get_mcm_auth(),
                 json = remove_json,
                 verify = self.get_ssl_verify_param()
             )

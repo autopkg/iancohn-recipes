@@ -16,7 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import requests
 
 from autopkglib import (  # pylint: disable=import-error
     ProcessorError,
@@ -37,7 +36,7 @@ class McmCategoryGetterBase(McmApiBase):
     """Return details about a user category with the specified name and type"""
     def initialize_all(self):
         self.initialize_headers()
-        self.initialize_ntlm_auth()
+        self.initialize_auth()
         self.initialize_ssl_verification()
         self.initialize_export_properties("mcm_category_getter_export_properties")
         self.fqdn = self.env.get('mcm_site_server_fqdn')

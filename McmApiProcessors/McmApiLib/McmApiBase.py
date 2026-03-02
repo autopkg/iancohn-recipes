@@ -16,21 +16,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import platform
-import requests
-import uuid
-import json
+import atexit
 #import string
 #import random
 #import base64
+from copy import deepcopy
 from ctypes import c_int32
 from datetime import datetime
 from enum import Enum, auto
-from os import path, walk
 from io import BytesIO
-from lxml import etree
-from copy import deepcopy
+import json
+from os import path, walk, unlink
 from pathlib import Path
+import platform
+import shutil
+import subprocess
+import tempfile
+import uuid
 
 # to use a base/external module in AutoPkg we need to add this path to the sys.path.
 # this violates flake8 E402 (PEP8 imports) but is unavoidable, so the following
@@ -44,8 +46,13 @@ vendor_path = os.path.join(os.path.dirname(__file__),"vendor",platform_name,arch
 if vendor_path not in sys.path:
     sys.path.insert(0, vendor_path)
 
+import dns.resolver
 import keyring
-from requests_ntlm import HttpNtlmAuth
+import requests
+import smbclient
+from requests_gssapi import HTTPKerberosAuth, OPTIONAL
+from lxml import etree
+
 
 from autopkglib import ( # pylint: disable=import-error
     Processor,
@@ -525,7 +532,7 @@ class McmApiBase(Processor):
             response = requests.request(
                 method = 'GET', 
                 url = url, 
-                auth = self.get_mcm_ntlm_auth(),
+                auth = self.get_mcm_auth(),
                 headers = self.headers, 
                 timeout = (2, 5), 
                 verify = self.get_ssl_verify_param()
@@ -556,7 +563,7 @@ class McmApiBase(Processor):
         appSearchResponse = requests.request(
             method = 'GET', 
             url = url, 
-            auth = self.ntlm, 
+            auth = self.get_mcm_auth(), 
             headers = self.headers, 
             verify = self.get_ssl_verify_param(), 
             params = body
@@ -574,7 +581,7 @@ class McmApiBase(Processor):
         app = requests.request(
             method = 'GET', 
             url = appUrl, 
-            auth = self.ntlm, 
+            auth = self.get_mcm_auth(), 
             headers = self.headers, 
             verify = self.get_ssl_verify_param()
         )
@@ -608,7 +615,7 @@ class McmApiBase(Processor):
         app_search_response = requests.request(
             method = 'GET',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
             params = body
@@ -638,7 +645,7 @@ class McmApiBase(Processor):
         response = requests.request(
             method = 'GET',
             url = app_detail_url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
             timeout = (2,5)
@@ -658,7 +665,7 @@ class McmApiBase(Processor):
         searchResponse = requests.request(
             method = 'GET', 
             url = url, 
-            auth = self.ntlm, 
+            auth = self.get_mcm_auth(), 
             headers = self.headers, 
             verify = self.get_ssl_verify_param(), 
             params = body
@@ -672,24 +679,6 @@ class McmApiBase(Processor):
             self.output(f"{task_sequence_name} not found in {self.fqdn}")
             return None
         return searchResponse.json()["value"][0]
-        
-    def get_mcm_ntlm_auth(self) -> HttpNtlmAuth:
-        """Get the credential from keychain using the supplied 
-        parameters and return an HttpNtlmAuth object from the retrieved
-        details
-        """
-        if self.__getattribute__('ntlm_auth') is not None and isinstance(self.ntlm_auth, HttpNtlmAuth):
-            self.output("NTLM Auth object exists. Returning it", 3)
-            return self.ntlm_auth
-        self.output("NTLM Auth object does not currently exist. It will be created", 3)
-        try:
-            password = keyring.get_password(self.keychain_service_name, self.keychain_username)
-            if password is None:
-                raise ProcessorError(f"No password found for {self.keychain_username} in {self.keychain_service_name}")
-            self.ntlm_auth = HttpNtlmAuth(self.keychain_username, password)
-            return self.ntlm_auth
-        except Exception as e:
-            raise ProcessorError(f"Failed to retrieve credentials: {e}")
 
     def new_resource_id_attribute(self) -> XmlAttributeAsDict:
         """Utility function for quicker creation of a ResourceId
@@ -708,7 +697,7 @@ class McmApiBase(Processor):
         response = requests.request(
             method = 'GET', 
             url = url, 
-            auth = self.ntlm_auth,
+            auth = self.get_mcm_auth(),
             headers = self.headers, 
             verify = self.get_ssl_verify_param()
         )
@@ -731,7 +720,7 @@ class McmApiBase(Processor):
         sms_category_instances = requests.request(
             method='GET',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
         )
@@ -755,7 +744,7 @@ class McmApiBase(Processor):
         sms_secured_category_membership = requests.request(
             method = 'GET',
             url = url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             verify = self.get_ssl_verify_param()
         )
@@ -846,14 +835,186 @@ class McmApiBase(Processor):
         site_id_clean = site_id.replace('{', '').replace('}', '')
         return f"ScopeId_{site_id_clean}"
     
-    def initialize_headers(self):
-        self.output("Generating headers.", 3)
-        self.headers = {
-            "Accept": "application/json", 
-            "Content-Type": "application/json"
-        }
+    def _teardown_kerberos_env(self,ccname : str):
+
+        if self._krb5_config_backup != '':
+            self.output(f'Reverting KRB5_CONFIG', 2)
+            self.output(f'KRB5_CONFIG: {self._krb5_config_backup}', 3)
+            os.environ['KRB5_CONFIG'] = self._krb5_config_backup
+        else:
+            self.output('Unsetting KRB5_CONFIG environment variable', 3)
+            krb5_config_unset = subprocess.run(['unset','KRB5_CONFIG'], shell=True, capture_output=True,text=True,check=True)
+            self.output(f'KRB5_CONFIG unset return code: {krb5_config_unset.returncode}', 3)
+        
+        if self._krb5ccname_backup != '':
+            self.output(f'Reverting KRB5CCNAME', 2)
+            self.output(f'KRB5CCNAME: {self._krb5ccname_backup}', 3)
+            os.environ['KRB5CCNAME'] = self._krb5ccname_backup
+        else:
+            self.output('Unsetting KRB5CCNAME environment variable', 3)
+            krb5ccname_unset = subprocess.run(['unset','KRB5CCNAME'], shell=True, capture_output=True,text=True,check=True)
+            self.output(f'KRB5CCNAME unset return code: {krb5ccname_unset.returncode}', 3)
+        
+        if True == self.env.get('keep_env', False):
+            self.output('--keep-env was used')
+            self.output(f'Temp KRB5_CONFIG: {self._krb5_config}')
+            self.output(f'Temp KRB5CCNAME: {self._krb5ccache}')
+            return
+
+        self.output('--keep-env was not used. Destroying temporary files', 3)
+        self.output(f"Calling kdestroy", 2)
+        self.output(f"KRB5CCNAME: {ccname}", 3)
+        teardown_result = subprocess.run(['kdestroy','-c',f'{ccname}'],capture_output=True,check=True,text=True)
+        self.output(f"kdestroy return code: {teardown_result.returncode}", 2)
+        
+        if os.path.exists(self._krb5_config):
+            self.output("Deleting temporary KRB5_CONFIG", 3)
+            _ = os.unlink(self._krb5_config)
+
+        if os.path.exists(self._krb5ccache):
+            self.output('Deleting temporary credential cache', 3)
+            _ = os.unlink(self._krb5ccache)
+    def _build_krb_config(self,realm: str, domain: str, auto_resolve: bool, kdcs: list[str], admin_servers: list[str]) -> str:
+        lines = []
+        lines.append('[libdefaults]')
+        lines.append(f'\tdefault_realm = {realm}')
+        lines.append('\tforwardable = true')
+        lines.append('\trdns = false')
+        if auto_resolve:
+            lines.append('\tdns_lookup_kdc = true')
+            lines.append('\tdns_lookup_realm = true')
+        lines.append('')
+        if not auto_resolve:
+            lines.append('[realms]')
+            lines.append(f'\t{realm}' + ' = {')
+            for kdc in kdcs:
+                lines.append(f'\t\tkdc = {kdc}')
+            if admin_servers:
+                for host in admin_servers:
+                    lines.append(f'\t\tadmin_server = {host}')
+            elif kdcs:
+                lines.append(f'\t\tadmin_server = {kdcs[0].split(":")[0]}')
+            lines.append('\t}')
+            lines.append('')
+        lines.append('[domain_realm]')
+        lines.append(f'\t.{domain.lower()} = {realm}')
+        lines.append(f'\t{domain.lower()} = {realm}')
+        lines.append('')
+        return '\n'.join(lines)
+
+    def _resolve_kpasswd_hosts(self,realm: str) -> list[str]:
+        """SRV lookup for _kpasswd._tcp.<realm>."""
+        try:
+            answers = dns.resolver.resolve(f'_kpasswd._tcp.{realm.lower()}', 'SRV')
+            sorted_records = sorted(answers, key=lambda r: (r.priority, r.weight))
+            return [r.target.to_text().rstrip('.') for r in sorted_records]
+        except dns.exception.DNSException:
+            return []
     
-    def initialize_ntlm_auth(self):
+    def _resolve_kdc_hosts(self,realm: str) -> list[str]:
+        """SRV lookup for _kerberos._tcp.<realm>, returns list of 'host:port' sorted by priority."""
+        try:
+            answers = dns.resolver.resolve(f'_kerberos._tcp.{realm.lower()}', 'SRV')
+            sorted_records = sorted(answers, key=lambda r: (r.priority, r.weight))
+            return [f'{r.target.to_text().rstrip(".")}:{r.port}' for r in sorted_records]
+        except dns.exception.DNSException:
+            return []
+
+    def _resolve_realm(self,domain: str) -> str:
+        """Attempt DNS TXT lookup for _kerberos.<domain>, fall back to uppercased domain."""
+        try:
+            answers = dns.resolver.resolve(f'_kerberos.{domain}', 'TXT')
+            for rdata in answers:
+                for txt in rdata.strings:
+                    return txt.decode()
+        except Exception as e:
+            pass
+        return domain.upper()
+
+    def _normalize_username(self,username : str, realm : str) -> str:
+        """Normalize the realm in the provided user name."""
+        if not username.__contains__('@') and not username.__contains__('\\'):
+            self.output("Username contains neither @ nor \\. No logical place to infer a realm", 3)
+            return username
+        if len(username.split('@')) == 2:
+            self.output("Username in user@domain format.", 3)
+            user_name = username.split('@')[0].strip()
+            user_domain = username.split('@')[-1].strip()
+        elif len(username.split('\\')) == 2:
+            self.output("Username in user@domain format.", 3)
+            user_name = username.split('\\')[0].strip()
+            user_domain = username.split('\\')[-1].strip()
+        else:
+            raise ValueError("Unhandled username format.")
+        
+        if user_domain.upper() != realm.upper():
+            self.output(f"user_domain: {user_domain}\trealm: {realm}", 3)
+            raise ValueError("User domain and Realm do not match.")
+        
+        normalized = f"{user_name}@{realm}"
+        return normalized
+
+    def _initialize_temp_kerberos_env(self):
+
+        pwd_file = tempfile.NamedTemporaryFile(mode='w',suffix='.pwd',delete=False)
+        pwd_file.write(self.password)
+        pwd_file.close()
+        self.pwd_file = pwd_file.name
+        atexit.register(os.unlink,pwd_file.name)
+
+        ccache = tempfile.mkstemp(suffix='.ccache')
+        ccname = f'FILE:{ccache[1]}'
+        self._krb5ccache = ccache[1]
+
+        self._krb5_config_backup = os.environ.get('KRB5_CONFIG','')
+        self._krb5ccname_backup = os.environ.get('KRB5CCNAME', '')
+
+        self.output("Generating kerberos config.", 3)
+        server_fqdn = self.env.get('mcm_site_server_fqdn')
+        krb_config_type = self.env.get('krb_config_type')
+        
+        parts = server_fqdn.lower().split('.')
+        domain = '.'.join(parts[1:]) if len(parts) > 2 else server_fqdn.lower()
+        realm = self._resolve_realm(domain)
+
+        krb_config_params = {
+            'realm': realm,
+            'domain': domain,
+        }
+        if krb_config_type == 'query':
+            self.output('Realm information will be determined using dns queries')
+            krb_config_params['auto_resolve'] = False
+            krb_config_params['kdcs'] = self._resolve_kdc_hosts(realm)
+            krb_config_params['admin_servers'] = self._resolve_kpasswd_hosts(realm)
+        else:
+            self.output('Realm information will be auto resolved', 3)
+            krb_config_params['auto_resolve'] = True
+            krb_config_params['kdcs'] = []
+            krb_config_params['admin_servers'] = []
+        
+        if not krb_config_params['auto_resolve'] and not krb_config_params['kdcs']:
+            raise RuntimeError(f"SRV lookup for _kerberos._tcp.{realm.lower()} returned no results and auto_resolve is False.")
+        krb5_config = self._build_krb_config(**krb_config_params)
+        self.output('Writing out KRB5 config', 3)
+        conf = tempfile.NamedTemporaryFile(mode='w',suffix='.krb5.config',delete=False)
+        conf.write(krb5_config)
+        conf.close()
+        self.output("Setting os environment variables", 3)
+        self._krb5_config = conf.name
+        os.environ['KRB5CCNAME'] = ccname
+        os.environ['KRB5_CONFIG'] = self._krb5_config
+        
+        atexit.register(self._teardown_kerberos_env,ccname)
+
+        self.output(f'KRB5_CONFIG: {self._krb5_config}', 3)
+        self.mcm_user = self._normalize_username(username=self.env.get('mcm_user',self.keychain_username), realm=realm)
+        self.output(f'Username: {self.mcm_user}', 3)
+        self.output(f'Calling kinit', 2)
+        kinit_result = subprocess.run(['kinit',f'--password-file={self.pwd_file}', '-c',ccname, self.mcm_user], capture_output=True,text=True,check=True)
+        self.output(f'kinit return code: [{kinit_result.returncode}] {kinit_result.stderr}')
+    
+    def initialize_auth(self):
+        #self.initialize_ntlm_auth()
         self.output("Checking supplied parameters", 3)
         self.keychain_service_name = self.env.get("keychain_password_service")
         self.keychain_username = self.env.get("keychain_password_username", None) or self.env.get("MCMAPI_USERNAME", '')
@@ -864,17 +1025,85 @@ class McmApiBase(Processor):
             raise ValueError("keychain_password_service cannot be blank")
         if (self.keychain_username == None or self.keychain_username == ''):
             raise ValueError("keychain_password_username cannot be blank")
-        self.ntlm_auth = None
-        _ = self.get_mcm_ntlm_auth()
+        self.password = keyring.get_password(self.keychain_service_name, self.keychain_username)
+        self.initialize_gss_auth()
     
+    def get_mcm_auth(self):
+        #self.get_mcm_ntlm_auth()
+        return self.get_mcm_gss_auth()
+    
+    def initialize_gss_auth(self):
+        if (self.fqdn == None or self.fqdn == ''):
+            raise ValueError("mcmserver cannot be blank")
+        self.auth = None
+        _ = self._initialize_temp_kerberos_env()
+        _ = self.get_mcm_gss_auth()
+    
+    def get_mcm_gss_auth(self):
+        """Construct a HTTPKerberosAuth auth object from the retrieved
+        details
+        """
+        
+        if self.__getattribute__('auth') is not None and \
+            isinstance(self.auth, HTTPKerberosAuth):
+            return self.auth
+        self.output("GSSAPI Auth object does not currently exist. It will be created", 2)
+        try:
+            self.auth = HTTPKerberosAuth(mutual_authentication=OPTIONAL)
+            return self.auth
+        except Exception as e:
+            raise LookupError(f"Failed to retrieve credentials: {e}")
+    
+    def cleanup_gssapi(self):
+        if hasattr(self, 'auth'):
+            del self.auth
+        import gc
+        gc.collect()
+    
+    def cleanup(self):
+        self.cleanup_gssapi()
+    
+    def initialize_headers(self):
+        self.output("Generating headers.", 3)
+        self.headers = {
+            "Accept": "application/json", 
+            "Content-Type": "application/json"
+        }
+    
+    def try_copy_smb_file_to_local(
+            self,
+            smb_source_path : str,
+            local_destination_path : str) -> bool:
+        """Attempt to mount an smb path and copy the indicated file"""
+        try:
+            _ = os.makedirs(os.path.dirname(local_destination_path), exist_ok=True)
+            self.output(f"Path ({os.path.dirname(local_destination_path)}) exists: {os.path.exists(os.path.dirname(local_destination_path))}", 3)
+            smbclient.ClientConfig(username=self.mcm_user,password=self.password)
+            src = smb_source_path.replace("/",r'\\')
+            self.output(f"Source file smb path: {src}", 3)
+            self.output(f"Local destination path: {local_destination_path}", 3)
+            with smbclient.open_file(src,mode="rb") as remote, open(local_destination_path, mode="wb") as local:
+                shutil.copyfileobj(remote,local)
+            return True
+        except Exception as e:
+            self.output(e, 2)
+            return False
     def initialize_ssl_verification(self):
-        self.output("Configuring SSL verification", 3)
-        _ssl_verify = self.env.get("mcm_ssl_verification",False)
-        if isinstance(_ssl_verify, bool):
-            self.ssl_verify = _ssl_verify
+        _ssl_verify = self.env.get('mcm_ssl_verification')
+        if isinstance(_ssl_verify, bool) or ['false','true'].__contains__(str(_ssl_verify).lower()):
+            self.ssl_verify = str(_ssl_verify).lower == 'true'
         elif isinstance(_ssl_verify, str):
+            if _ssl_verify.startswith('\\\\'):
+                _ssl_verify = tempfile.mkstemp(suffix='.pem',prefix='ssl_')[1]
+                _ssl_verify = os.path.join(os.path.dirname(__file__),"ssl.pem")
+                atexit.register(unlink,_ssl_verify)
+                self.output(f"Copying remote cert .pem file to {_ssl_verify}", 4)
+                ssl_copy_success = self.try_copy_smb_file_to_local(smb_source_path=self.env.get('mcm_ssl_verification'),local_destination_path=_ssl_verify)
+                self.output(f"SSL Copy succeeded: {ssl_copy_success}", 4)
+            else:
+                self.output("SSL path appears to be local")
             self.ssl_verify = str(Path(_ssl_verify).resolve())
-
+        self.output(f"SSL Verify: {type(self.ssl_verify).__name__}({self.ssl_verify})", 4)
     def get_ssl_verify_param(self):
         """Get the value of the 'verify' parameter for http requests
         """

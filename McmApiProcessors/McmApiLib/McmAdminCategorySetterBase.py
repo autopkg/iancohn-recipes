@@ -35,7 +35,8 @@ from McmApiLib.McmApiBase import ( #noqa: E402
 class McmAdminCategorySetterBase(McmApiBase):
     def initialize_all(self):
         self.initialize_headers()
-        self.initialize_ntlm_auth()
+        self.initialize_auth()
+        self.initialize_ssl_verification()
         self.fqdn = self.env.get('mcm_site_server_fqdn')
         self.action = self.env.get('action',self.input_variables['action']['default']).lower()
         if self.input_variables['action']['options'].__contains__(self.action.lower()) == False:
@@ -88,7 +89,7 @@ class McmAdminCategorySetterBase(McmApiBase):
         add_response = requests.request(
             method = 'POST',
             url = add_url,
-            auth = self.get_mcm_ntlm_auth(),
+            auth = self.get_mcm_auth(),
             headers = self.headers,
             json = category_post_body,
             verify = False
