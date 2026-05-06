@@ -1,0 +1,5 @@
+Description: Recipe stub for any Processors in this Directory
+Identifier: com.github.iancohn.SmbCopier
+Input: {}
+MinimumVersion: 2.7.6
+Process: []
