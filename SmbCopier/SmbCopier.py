@@ -288,6 +288,7 @@ class SmbCopier(Processor):
                             shutil.copyfileobj(src,dst)
                     
             else:
+                self.output(f"Copying file {source_path} to {_destination_path}")
                 with filesystem[src_loc]['opener'](source_path,mode='rb') as src, \
                     filesystem[dst_loc]['opener'](_destination_path,mode='wb') as dst:
                     shutil.copyfileobj(src,dst)
