@@ -1,0 +1,14 @@
+Description: |
+  Copy /etc/hosts file to an SMB file share
+Identifier: com.github.iancohn.smbcopier.Example
+MinimumVersion: "2.7.6"
+Input:
+  NAME: Example
+Process:
+  - Processor: com.github.iancohn.SmbCopier/SmbCopier
+    Arguments:
+      smbcopier_keychain_username: user1@company.com
+      smbcopier_keychain_servicename: com.github.autopkg.iancohn-recipes.smbcopier
+      source_path: /etc/hosts
+      destination_path: \\smb_server.fqdn.company.com\share\path\to\hosts.temp
+      overwrite: False
