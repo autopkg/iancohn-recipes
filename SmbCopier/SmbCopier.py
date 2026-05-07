@@ -165,7 +165,7 @@ class SmbCopier(Processor):
         local_relpath = os.path.relpath(**relpath_params)
         smb_relpath = self.local_to_smb(local_relpath)
         return smb_relpath
-
+    
     def try_smbcopy(
             self,
             source_path : str,
@@ -187,7 +187,9 @@ class SmbCopier(Processor):
                 'split': self.smb_split,
                 'join': self.smb_join,
                 'walk': smbclient.walk,
-                'relpath': self.smb_relpath
+                'relpath': self.smb_relpath,
+                'stat': smbclient.stat,
+                'utime': smbclient.utime,
             },
             'local': {
                 'opener': open,
@@ -203,6 +205,8 @@ class SmbCopier(Processor):
                 'join': os.path.join,
                 'walk': os.walk,
                 'relpath': os.path.relpath,
+                'stat': os.stat,
+                'stat': os.utime
             },
         }
 
@@ -238,6 +242,9 @@ class SmbCopier(Processor):
                 self.output(f"New destination path: {_destination_path}", 3)
             else:
                 _destination_path = destination_path
+
+            if _destination_path.lower() == source_path.lower():
+                raise ProcessorError('Cannot copy a file or folder to itself. Consider using FileMover')
 
             if filesystem[dst_loc]['exists'](_destination_path):
                 self.output(f"{src_type.capitalize()} already exists", 3)
@@ -275,17 +282,34 @@ class SmbCopier(Processor):
                         src_root = root
                     for dir in dirs:
                         src_dir_relpath = filesystem[src_loc]['relpath'](filesystem[src_loc]['join'](root,dir),src_root)
+                        src_dir_abspath = filesystem[src_loc]['join'](root,dir)
+                        src_dir_stats = filesystem[src_loc]['stat'](src_dir_abspath)
+                        src_dir_atime = src_dir_stats.st_atime
+                        src_dir_mtime = src_dir_stats.st_mtime
+                        
                         dst_dir_abspath = filesystem[dst_loc]['join'](dst_root,src_dir_relpath)
+                        
                         filesystem[dst_loc]['makedirs'](dst_dir_abspath,exist_ok=True)
+                        self.output("Setting modification/access time attributes on directory", 3)
+                        filesystem[dst_loc]['utime'](dst_dir_abspath,times=(src_dir_atime,src_dir_mtime))
+
                     for file in files:
                         src_file_relpath = filesystem[src_loc]['relpath'](filesystem[src_loc]['join'](root,file),src_root)
                         dst_file_relpath = self.convert_path(src_file_relpath,in_type=src_loc,out_type=dst_loc)
                         src_file_abspath = filesystem[src_loc]['join'](source_path,src_file_relpath)
                         dst_file_abspath = filesystem[dst_loc]['join'](dst_root,dst_file_relpath)
+
+                        src_file_stats = filesystem[src_loc]['stat'](src_file_abspath)
+                        src_file_atime = src_file_stats.st_atime
+                        src_file_mtime = src_file_stats.st_mtime
+
                         self.output(f"Copying file {src_file_relpath} to {dst_file_abspath}")
                         with filesystem[src_loc]['opener'](src_file_abspath,mode='rb') as src, \
                             filesystem[dst_loc]['opener'](dst_file_abspath,mode='wb') as dst:
                             shutil.copyfileobj(src,dst)
+                        
+                        self.output("Setting modification/access time attributes on file", 3)
+                        filesystem[dst_loc]['utime'](dst_file_abspath,times=(src_file_atime,src_file_mtime))
                     
             else:
                 self.output(f"Copying file {source_path} to {_destination_path}")
