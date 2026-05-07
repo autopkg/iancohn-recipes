@@ -165,7 +165,7 @@ class SmbCopier(Processor):
         local_relpath = os.path.relpath(**relpath_params)
         smb_relpath = self.local_to_smb(local_relpath)
         return smb_relpath
-    
+
     def try_smbcopy(
             self,
             source_path : str,
@@ -206,7 +206,7 @@ class SmbCopier(Processor):
                 'walk': os.walk,
                 'relpath': os.path.relpath,
                 'stat': os.stat,
-                'stat': os.utime
+                'utime': os.utime
             },
         }
 
@@ -288,7 +288,7 @@ class SmbCopier(Processor):
                         src_dir_mtime = src_dir_stats.st_mtime
                         
                         dst_dir_abspath = filesystem[dst_loc]['join'](dst_root,src_dir_relpath)
-                        
+                        self.output(f"Creating directory: {src_dir_relpath}", 3)
                         filesystem[dst_loc]['makedirs'](dst_dir_abspath,exist_ok=True)
                         self.output("Setting modification/access time attributes on directory", 3)
                         filesystem[dst_loc]['utime'](dst_dir_abspath,times=(src_dir_atime,src_dir_mtime))
@@ -310,12 +310,19 @@ class SmbCopier(Processor):
                         
                         self.output("Setting modification/access time attributes on file", 3)
                         filesystem[dst_loc]['utime'](dst_file_abspath,times=(src_file_atime,src_file_mtime))
-                    
+                    self.output("Finished copying items")
             else:
                 self.output(f"Copying file {source_path} to {_destination_path}")
                 with filesystem[src_loc]['opener'](source_path,mode='rb') as src, \
                     filesystem[dst_loc]['opener'](_destination_path,mode='wb') as dst:
                     shutil.copyfileobj(src,dst)
+                src_file_stats = filesystem[src_loc]['stat'](source_path)
+                src_file_atime = src_file_stats.st_atime
+                src_file_mtime = src_file_stats.st_mtime
+                self.output("Setting modification/access time attributes on file", 3)
+                filesystem[dst_loc]['utime'](_destination_path,times=(src_file_atime,src_file_mtime))
+
+                self.output("Finished copying item")
             return True
         
         except Exception as e:
