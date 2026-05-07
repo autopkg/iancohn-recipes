@@ -98,7 +98,7 @@ $adtSession = @{
     AppRevision = '01'
     AppSuccessExitCodes = @(0)
     AppRebootExitCodes = @(1641, 3010)
-    AppProcessesToClose = @(%PSADT_CLOSE_APPS%)  # Example: @('excel', @{ Name = 'winword'; Description = 'Microsoft Word' })
+    AppProcessesToClose =  @(%PSADT_CLOSE_APPS%)  # Example: @('excel', @{ Name = 'winword'; Description = 'Microsoft Word' })
     AppScriptVersion = '%PSADT_SCRIPT_VERSION%'
     AppScriptDate = '%PSADT_SCRIPT_DATE%'
     AppScriptAuthor = '%PSADT_SCRIPT_AUTHOR%'
@@ -111,7 +111,7 @@ $adtSession = @{
     # Script variables.
     DeployAppScriptFriendlyName = $MyInvocation.MyCommand.Name
     DeployAppScriptParameters = $PSBoundParameters
-    DeployAppScriptVersion = '4.1.3'
+    DeployAppScriptVersion = '4.1.8'
 }
 
 function Install-ADTDeployment
@@ -179,7 +179,9 @@ function Install-ADTDeployment
     ## Display a message at the end of the install.
     if (!$adtSession.UseDefaultMsi)
     {
-        %PSADT_CUSTOM_INSTALL_COMPLETE_COMMAND%Show-ADTInstallationPrompt -Message 'Installation Complete' -ButtonRightText 'OK' -Icon Information -NoWait
+%PSADT_CUSTOM_INSTALL_COMPLETE_COMMAND%
+
+        Show-ADTInstallationPrompt -Message 'You can customize text to appear at the end of an install or remove it completely for unattended installations.' -ButtonRightText 'OK' -NoWait
     }
 }
 
@@ -304,11 +306,11 @@ try
     if (Test-Path -LiteralPath "$PSScriptRoot\PSAppDeployToolkit\PSAppDeployToolkit.psd1" -PathType Leaf)
     {
         Get-ChildItem -LiteralPath "$PSScriptRoot\PSAppDeployToolkit" -Recurse -File | Unblock-File -ErrorAction Ignore
-        Import-Module -FullyQualifiedName @{ ModuleName = "$PSScriptRoot\PSAppDeployToolkit\PSAppDeployToolkit.psd1"; Guid = '8c3c366b-8606-4576-9f2d-4051144f7ca2'; ModuleVersion = '4.1.3' } -Force
+        Import-Module -FullyQualifiedName @{ ModuleName = "$PSScriptRoot\PSAppDeployToolkit\PSAppDeployToolkit.psd1"; Guid = '8c3c366b-8606-4576-9f2d-4051144f7ca2'; ModuleVersion = '4.1.8' } -Force
     }
     else
     {
-        Import-Module -FullyQualifiedName @{ ModuleName = 'PSAppDeployToolkit'; Guid = '8c3c366b-8606-4576-9f2d-4051144f7ca2'; ModuleVersion = '4.1.3' } -Force
+        Import-Module -FullyQualifiedName @{ ModuleName = 'PSAppDeployToolkit'; Guid = '8c3c366b-8606-4576-9f2d-4051144f7ca2'; ModuleVersion = '4.1.8' } -Force
     }
 
     # Open a new deployment session, replacing $adtSession with a DeploymentSession.
@@ -356,7 +358,7 @@ catch
     # Show-ADTDialogBox -Text $mainErrorMessage -Icon Stop -NoWait
 
     ## Or, a themed dialog with basic error message:
-    # Show-ADTInstallationPrompt -Message "$($adtSession.DeploymentType) failed at line $($_.InvocationInfo.ScriptLineNumber), char $($_.InvocationInfo.OffsetInLine):`n$($_.InvocationInfo.Line.Trim())`n`nMessage:`n$($_.Exception.Message)" -MessageAlignment Left -ButtonRightText OK -Icon Error -NoWait
+    # Show-ADTInstallationPrompt -Message "$($adtSession.DeploymentType) failed at line $($_.InvocationInfo.ScriptLineNumber), char $($_.InvocationInfo.OffsetInLine):`n$($_.InvocationInfo.Line.Trim())`n`nMessage:`n$($_.Exception.Message)" -ButtonRightText OK -Icon Error -NoWait
 
     Close-ADTSession -ExitCode 60001
 }
