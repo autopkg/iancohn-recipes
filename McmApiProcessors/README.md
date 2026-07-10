@@ -64,6 +64,10 @@ Set the administrative categories on an application
 
 None
 
+## McmAppDeployer
+
+Connect to an MCM AdminService and create a deployment for an application to a collection
+
 ## McmAppGetter
 
 Get an application object from MCM.
@@ -85,7 +89,7 @@ Dynamic depending upon the configuration of the **mcm_app_getter_export_properti
 
 ## McmApplicationUploader
 
-Connect to an MCM AdminService and retrieve an application object, if it exists
+Connect to an MCM AdminService and create or update an application object, if it exists
 
 ### McmApplicationUploader Input Variables
 
@@ -102,6 +106,10 @@ Connect to an MCM AdminService and retrieve an application object, if it exists
 ### Output Variables
 
 Dynamic depending upon the configuration of the **mcm_app_uploader_export_properties** input variable
+
+## McmContentDistributionManager
+
+Connect to an MCM AdminService and distribute the content for an Application, Package, Boot Image, or OS Image
 
 ## McmObjectMover
 
@@ -132,6 +140,14 @@ Dynamic depending upon the configuration of the **mcm_app_uploader_export_proper
 | security_scopes            | A list of at least one security scope to set on the object                                       | `<None>`                                |
 | action                     | The action to take on the supplied object and security scopes (`add`, `remove`, `replace`) | `replace`                               |
 | existing_security_scopes   | The existing security scopes attached to the item.                                               | %app_securityscopes%                      |
+
+## McmScriptGetter
+
+Connect to an MCM AdminService and get a Script object
+
+## McmScriptUploader
+
+Connect to an MCM AdminService and create a Script object, or update it if it already exists
 
 ## McmSDMPackageXMLGenerator
 

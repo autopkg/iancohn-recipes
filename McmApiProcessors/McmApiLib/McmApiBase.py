@@ -19,7 +19,7 @@
 import atexit
 #import string
 #import random
-#import base64
+import base64
 from copy import deepcopy
 from ctypes import c_int32
 from datetime import datetime
@@ -137,6 +137,13 @@ class ArgumentType(Enum):
     Boolean = 'Boolean'
     Int32 = 'Int32'
     Int32Array = 'Int32[]'
+
+class ScriptParameterType(Enum):
+    """Valid ScriptParameterType values"""
+    String = 'System.String'
+    Integer = 'System.Int32'
+    List = 'System.String'
+    Boolean = 'System.Boolean'
 
 class RuleEvaluationMethod(Enum):
     """Valid Method values for Rule objects"""
@@ -512,7 +519,7 @@ class McmApiBase(Processor):
     """
 
     # Global version
-    __version__ = "2025.12.04.0"
+    __version__ = "2026.07.10.0"
 
     def get_int32_from_uuid(uuid:uuid.UUID):
         """Deterministically create an int from a given uuid"""
@@ -816,7 +823,15 @@ class McmApiBase(Processor):
         type name
         """
         return McmApiBase.try_cast(type_name, value) is not None
-
+    @staticmethod
+    def convert_to_b64(value: str) -> str:
+        """Convert a string to a base64 string"""
+        return base64.b64encode(value.encode('utf-8')).decode('utf-8')
+    @staticmethod
+    def convert_from_b64(value: str) -> str:
+        """Convert a base64 string to a regular string"""
+        return base64.b64decode(value.encode('utf-8')).decode('utf-8')
+    
     def get_identifier_from_string(self, string: str):
         """Return the simple uuid/guid string from an MCM identifier
         in '[Object Type]_[Guid] format'
@@ -1282,6 +1297,163 @@ class McmApiBase(Processor):
             self.env[k] = value
         self.output("Finished setting export properties", 2)
 
+    def get_script_by_name(self):
+        self.output(
+            f"Attempting to get script ({self.script_name}) "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_Scripts"
+        body = {"$filter": f"ScriptName eq '{self.script_name}' ",}
+        self.output(f"Body: {body}", 3)
+        script_search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if script_search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(script_search_response.status_code) or ''}]"
+                f"\tReason [{script_search_response.reason or ''}]"
+            )
+
+        if len(script_search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple script objects were "
+                "returned from the initial query"
+                )
+        if len(script_search_response.json()['value']) == 0:
+            self.output("No scripts were found.", 2)
+            self.response_value = {}
+            return
+        
+        self.output("Found script object",1)
+        self.output(f"ScriptGuid: {script_search_response.json()['value'][0].get('ScriptGuid')}", 3)
+        script_search_value = script_search_response.json()['value'][0]
+        script_guid = script_search_value.get('ScriptGuid')
+        self.output(f"Getting details for script {script_guid}", 3)
+        script_detail_url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                f"SMS_Scripts({script_guid})"
+            )
+        response = requests.request(
+            method = 'GET',
+            url = script_detail_url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code == 200 and len(response.json()['value']) == 1:
+            self.response_value = response.json()['value'][0]
+        else:
+            self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
+            raise ProcessorError(response.reason)
+
+    @staticmethod
+    def new_script_parameter(
+            name:str,
+            type:str,
+            friendly_name:str = "",
+            description:str = "",
+            is_required:bool = False,
+            is_hidden:bool = False,
+            default_value:str = "",
+            min_value=-2147483648,
+            max_value=2147483647,
+            min_length:int = 1,
+            max_length:int = 1024,
+            regex_validator:str = "",
+            regex_error_message:str = "",
+            values: list = []
+            ) -> XmlNodeAsDict:
+        """Create a new script parameter object"""
+        int_param_default_min_value = -2147483648,
+        int_param_default_max_value = 2147483647,
+        str_param_default_min_length = 1,
+        str_param_default_max_length = 1024,
+        if False == (type in ScriptParameterType.__members__):
+            raise ProcessorError(f"Invalid script parameter type: {type}")
+        if type == 'Boolean' and False == (default_value in ['$True','$False','']):
+            raise ProcessorError(f"Invalid default value for Boolean parameter: {default_value}")
+
+        if friendly_name == "":
+            friendly_name = name
+
+        parameter_node = XmlNodeAsDict(
+            NodeName = "ScriptParameter",
+            Attributes = [
+                XmlAttributeAsDict(Name = "Name", Value = f"{name}"),
+                XmlAttributeAsDict(Name = "FriendlyName", Value = f"{friendly_name}"),
+                XmlAttributeAsDict(Name = "Type", Value = f"{ScriptParameterType[type].value}"),
+                XmlAttributeAsDict(Name = "Description", Value = f"{description}"),
+                XmlAttributeAsDict(Name = "IsRequired", Value = f"{is_required.__str__().lower()}"),
+                XmlAttributeAsDict(Name = "IsHidden", Value = f"{is_hidden.__str__().lower()}"),
+                XmlAttributeAsDict(Name = "DefaultValue", Value = f"{default_value}")
+            ]
+        )
+        child_nodes = []
+        if type == 'String':
+            if str_param_default_min_length > min_length or str_param_default_max_length > max_length:
+                raise ProcessorError(f"Invalid min/max length for String parameter: {min_length}/{max_length}")
+            child_nodes.append(XmlNodeAsDict(
+                NodeName = "Validators",
+                ChildNodes = [
+                    XmlNodeAsDict(
+                        NodeName = "StringValidator",
+                        Attributes = [
+                            XmlAttributeAsDict(Name = "MinLength", Value = f"{min_length}"),
+                            XmlAttributeAsDict(Name = "MaxLength", Value = f"{max_length}"),
+                            XmlAttributeAsDict(Name = "CustomErrorMessage", Value = f"{regex_error_message}"),
+                            XmlAttributeAsDict(Name = "Regex", Value = f"{regex_validator}")
+                        ]
+                    )
+                ]
+            ))
+        if type == 'Integer':
+            if int_param_default_min_value > min_value or int_param_default_max_value < max_value:
+                raise ProcessorError(f"Invalid min/max value for Integer parameter: {min_value}/{max_value}")
+            child_nodes.append(XmlNodeAsDict(
+                NodeName = "Validators",
+                ChildNodes = [
+                    XmlNodeAsDict(
+                        NodeName = "IntegerValidator",
+                        Attributes = [
+                            XmlAttributeAsDict(Name = "MinValue", Value = f"{min_value}"),
+                            XmlAttributeAsDict(Name = "MaxValue", Value = f"{max_value}"),
+                        ]
+                    )
+                ]
+            ))
+        if type == 'List':
+            for value in values:
+                child_nodes.append(XmlNodeAsDict(
+                    NodeName = "Value",
+                    NodeInnerText = value                    
+                ))
+        if type == 'Boolean':
+            pass
+        
+        if len(child_nodes) > 0:
+            parameter_node.append_child_nodes(child_nodes)
+        return parameter_node
+    @staticmethod
+    def new_script_parameters_node(script_parameters:list) -> XmlNodeAsDict:
+        """Create a new script parameters node"""
+        node = XmlNodeAsDict(
+            name="ScriptParameters",
+            attributes=[
+                XmlAttributeAsDict(Name="SchemaVersion",Value="1")
+            ],
+            children=script_parameters
+        )
+        return node
+
+
+    
 if __name__ == "__main__":
     PROCESSOR = McmApiBase()
     PROCESSOR.execute_shell()
