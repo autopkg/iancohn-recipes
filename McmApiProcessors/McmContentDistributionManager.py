@@ -121,6 +121,11 @@ class McmContentDistributionManager(McmContentDistributionManagerBase):
                 "(if 'fail_on_distribution_failure is set to True) no errors "
                 "occurred while monitoring the distribution status."
             )
+        },
+        "content_removed_successfully": {
+            "description": (
+                "True if all content removals completed successfully"
+            )
         }
     }
 

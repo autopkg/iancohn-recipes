@@ -21,6 +21,7 @@ import os.path
 import platform
 import sys
 import time
+import json
 
 # to use a base/external module in AutoPkg we need to add this path to the sys.path.
 # this violates flake8 E402 (PEP8 imports) but is unavoidable, so the following
@@ -118,8 +119,8 @@ class McmContentDistributionManagerBase(McmApiBase):
             dpgs = self.get_distribution_point_groups()
             dpg_ids = [dpg['GroupID'] for dpg in dpgs if dpg['Name'] in self.distribution_point_group_names]
             if len(dpg_ids) > 0:
-                self.output(f"Distributing content package {content_package_id} to {', '.join(self.distribution_point_group_names)}", 2)
                 if self.action == 'Add':
+                    self.output(f"Distributing content package {content_package_id} to {', '.join(self.distribution_point_group_names)}", 2)
                     url = f"https://{self.fqdn}/AdminService/wmi/SMS_ContentPackage('{content_package_id}')/AdminService.AddDistributionPointGroup"
                     self.output(f"Post url: {url}", 3)
                     
@@ -143,8 +144,44 @@ class McmContentDistributionManagerBase(McmApiBase):
                         ))
                     self.output(f"Distribution created. {', '.join(dpg_ids) }", 2)
                 elif self.action == 'Remove':
-                    self.output("WARNING: Removal not supported yet", 1)
-                    pass
+                    self.env['content_removed_successfully'] = None
+                    for dpg_id in dpg_ids:
+                        try:
+                            self.output(f"Removing {content_package_id} from {dpg_id}", 3)
+                            url = f"https://{self.fqdn}/AdminService/wmi/SMS_DistributionPointGroup('{dpg_id}')/AdminService.RemovePackages"
+                            body = {
+                                "PackageIDs": [content_package_id],
+                            }
+                            response = requests.request(
+                                method = 'POST',
+                                url = url,
+                                auth = self.get_mcm_auth(),
+                                headers = self.headers,
+                                json = body,
+                                verify = self.get_ssl_verify_param(),
+                            )
+                            if False == (response.status_code in [200,201]):
+                                raise ProcessorError((
+                                    f"Error ({response.status_code}) "
+                                    f"removing content package {content_package_id} "
+                                    f"from distribution point group {dpg_id}: "
+                                    f"{response.reason}"
+                                ))
+                        except Exception as e:
+                            self.output((
+                                    f"Error ({response.status_code}) "
+                                    f"removing content package {content_package_id} "
+                                    f"from distribution point group {dpg_id}: "
+                                    f"{response.reason}"
+                                )
+                            )
+                            self.env['content_removed_successfully'] = False
+                            continue
+                    if None == self.env['content_removed_successfully']:
+                        self.env['content_removed_successfully'] = True
+                    self.output("Finished.", 1)
+                    return
+                        
             if len(self.distribution_point_names) > 0:
                 self.output("WARNING: Processor does not support single distribution points.",1)
             
