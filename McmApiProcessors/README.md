@@ -103,6 +103,45 @@ Connect to an MCM AdminService and retrieve an application object, if it exists
 
 Dynamic depending upon the configuration of the **mcm_app_uploader_export_properties** input variable
 
+### McmContentDistributionManager
+
+Connect to an MCM AdminService and create or remove content distribution jobs for SMS_ContentPackage objects
+
+### McmContentDistributionManager Input Variables
+```
+    output_variables = {
+        "content_distributed_successfully": {
+            "description": (
+                "True if content distributions were successfully created and "
+                "(if 'wait_for_distribution' is set to True) no errors "
+                "occurred while monitoring the distribution status."
+            )
+        },
+        "content_removed_successfully": {
+            "description": (
+                "True if all content removals completed successfully"
+            )
+        }
+    }
+
+```
+
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
+| content_package_security_key | The security key of the content package to distribute. | `%app_model_name`% |
+| action | The action to perform. Valid values are 'Add' or 'Remove'. | Add |
+| distribution_point_group_names | A list of distribution point group names to add or remove the content package from. | [] |
+| wait_for_distribution | If `True`, waits for the distribution jobs to complete before returning, up to the value specified in `timeout` | `True` |
+| timeout | The maximum time, in seconds, to wait for distributions to complete | 3600 |
+| fail_on_distribution_failure | If `True`, raise an exception when distribution fails | `True` |
+
+### Output Variables
+
+| Variable Name | Description |
+| ------------- | ----------- |
+| content_distributed_successfully | `True` if content distributions were successfully created and (if 'wait_for_distribution' is set to True) no errors occurred while monitoring the distribution status" |
+| content_removed_successfully | `True` if all content removals completed successfully |
+
 ## McmObjectMover
 
 ### McmObjectMover Input Variables

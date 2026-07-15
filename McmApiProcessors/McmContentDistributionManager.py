@@ -118,7 +118,7 @@ class McmContentDistributionManager(McmContentDistributionManagerBase):
         "content_distributed_successfully": {
             "description": (
                 "True if content distributions were successfully created and "
-                "(if 'fail_on_distribution_failure is set to True) no errors "
+                "(if 'wait_for_distribution' is set to True) no errors "
                 "occurred while monitoring the distribution status."
             )
         },
