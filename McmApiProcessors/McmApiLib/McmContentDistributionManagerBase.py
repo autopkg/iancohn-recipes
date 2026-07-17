@@ -52,7 +52,7 @@ class McmContentDistributionManagerBase(McmApiBase):
         self.initialize_ssl_verification()
         self.fqdn = self.env.get('mcm_site_server_fqdn')
 
-        self.content_package_security_key = self.env.get("content_package_security_key", self.env.get('app_model_name',''))
+        self.content_package_security_key = self.env.get('content_package_security_key', self.env.get('app_model_name',''))
         if self.content_package_security_key == '' or self.content_package_security_key is None:
             raise ProcessorError(
                 "No content package security key provided. "
