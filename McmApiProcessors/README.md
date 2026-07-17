@@ -27,6 +27,12 @@ $target = "com.github.autopkg.iancohn-recipes.mcmapi" # Or your preferred servic
 
 > ℹ️ **Important Note:** These processors have not yet been tested on Windows and are almost certainly NOT functional
 
+## A Word on Permissions
+
+The account being used must also exist as a user in the MCM environment. A suggested [Security Role definition](Examples/SampleMcmRole.xml) to associate with the account is included in this repository and attempts to define the minimum permissions set required to use all of the funcionality in this processors in this library. I suggest assigning the role to your service account, associating it with ALL security scopes, and any collections for which you wish to work with, rather than granting permissions to All Collections. You may wish to make modifications to this plan per your use case, however.
+
+Happy Testing :D
+
 # Common Input Variables
 
 The following input variables are used in most of these processors.

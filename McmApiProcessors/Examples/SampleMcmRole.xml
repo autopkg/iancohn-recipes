@@ -1,0 +1,14 @@
+<SMS_Roles>
+  <SMS_Role CopiedFromID="SMS00001" RoleName="AutoPkg" RoleDescription="A role to be assigned to the AutoPkg service account so it can create and manage applications, deployments, and content distributions">
+    <Operations>
+      <Operation GrantedOperations="806359105" ObjectTypeID="1" />
+      <Operation GrantedOperations="1" ObjectTypeID="6" />
+      <Operation GrantedOperations="1" ObjectTypeID="20" />
+      <Operation GrantedOperations="1" ObjectTypeID="29" />
+      <Operation GrantedOperations="805446675" ObjectTypeID="31" />
+      <Operation GrantedOperations="1" ObjectTypeID="32" />
+      <Operation GrantedOperations="9" ObjectTypeID="43" />
+      <Operation GrantedOperations="1" ObjectTypeID="226" />
+    </Operations>
+  </SMS_Role>
+</SMS_Roles>
