@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
+#import json
 from datetime import datetime,timezone
 
 from autopkglib import (  # pylint: disable=import-error
@@ -255,7 +255,7 @@ class McmAppDeployerBase(McmApiBase):
         #if self.env.get(expiration_time,None) is not None and self.env.get(expiration_time,'') != "":
         #    pass # no expiration time on app deployments
         #    #body['ExpirationTime'] = self.expiration_time
-        self.output(json.dumps(body), 3)
+        #self.output(json.dumps(body), 3)
         self.output(f"Craeting application assignment at {url}", 2)
         post_response = requests.request(
             method = 'POST',
