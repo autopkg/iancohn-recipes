@@ -61,7 +61,7 @@ class McmAppGetter(McmAppGetterBase):
             "required": False,
             "description": "How to generate the kerberos configuration.",
             "options": ["auto","query","custom"],
-            "default": ["auto"]
+            "default": "auto",
         },
         #krb_config_path
         "application_name": {

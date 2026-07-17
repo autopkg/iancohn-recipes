@@ -1,7 +1,7 @@
 #!/usr/local/autopkg/python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2025 Ian Cohn
+# Copyright 2026 Ian Cohn
 # https://www.github.com/autopkg/iancohn-recipes
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import atexit
 import base64
 from copy import deepcopy
 from ctypes import c_int32
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from io import BytesIO
 import json
@@ -254,6 +254,72 @@ class DetectionType(Enum):
     MSI = "MSI"
     Group = "Group"
     CustomScript = "CustomScript"
+
+class OfferFlag(Enum):
+    """Valid OfferFlag values"""
+    PREDEPLOY = 1
+    ONDEMAND = 2
+    ENABLEPROCESSTERMINATION = 4
+    ALLOWUSERSTOREPAIRAPP = 8
+    RELATIVESCHEDULE = 16
+    HIGHIMPACTDEPLOYMENT = 32
+    REMOVEONCOLLECTIONDROP = 64
+
+class OfferType(Enum):
+    """Valid OfferType values"""
+    REQUIRED = 0
+    AVAILABLE = 2
+
+class InstallPriority(Enum):
+    """Valid Priority values for application assignments"""
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
+
+class AssignmentAction(Enum):
+    """Valid AssignmentAction values"""
+    DETECT = 1
+    APPLY = 2
+
+class AssignmentType(Enum):
+    """Valid AssignmentType values"""
+    CIA_TYPE_DCM_BASELINE = 0
+    CIA_TYPE_UPDATES = 1
+    CIA_TYPE_APPLICATION = 2
+    CIA_TYPE_UPDATE_GROUP = 5
+    CIA_TYPE_POLICY = 8
+
+class DesiredConfigType(Enum):
+    """Valid DesiredConfigType values"""
+    REQUIRED = 1
+    NOT_ALLOWED = 2
+
+class DesiredConfigTypeToShortAction(Enum):
+    REQUIRED = 'Install'
+    NOT_ALLOWED = 'Uninstall'
+
+class DPLocalityFlag(Enum):
+    """Valid DPLocality flag values"""
+    DP_DOWNLOAD_FROM_LOCAL = 64
+    DP_DOWNLOAD_FROM_REMOTE = 16
+    DP_NO_FALLBACK_UNPROTECTED = 17
+    #DP_ALLOW_WUMU = 18
+    #DP_ALLOW_METERED_NETWORK = 19
+    DP_ALLOW_METERED_NETWORK = 524288
+
+class StateMessagePriority(Enum):
+    """Valid StateMessagePriority values"""
+    URGENT = 0
+    HIGH = 1
+    NORMAL = 5
+    LOW = 10
+
+class SuppressRebootClientType(Enum):
+    """"Valid ClientType values for reboot suppression during application deployment"""
+    WORKSTATIONS = 0
+    SUPPRESS_REBOOT_WORKSTATIONS = 0
+    SERVERS = 1
+    SUPPRESS_REBOOT_SERVERS = 1
 
 PROPERTY_PATH_DATA_TYPE = {
     """Map PropertyPaths to valid DataType values"""
@@ -519,8 +585,11 @@ class McmApiBase(Processor):
     """
 
     # Global version
-    __version__ = "2026.07.10.0"
+    __version__ = "2026.07.17.0"
 
+    @staticmethod
+    def new_guid_str() -> str:
+        return uuid.uuid4().__str__()
     def get_int32_from_uuid(uuid:uuid.UUID):
         """Deterministically create an int from a given uuid"""
         uuid_hash = hash(uuid)
@@ -659,6 +728,117 @@ class McmApiBase(Processor):
         )
         if response.status_code == 200 and len(app_search_response.json()['value']) == 1:
             self.response_value = response.json()['value'][0]
+        else:
+            self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
+            raise ProcessorError(response.reason)
+
+    def get_application_by_model_name(self,app_model_name):
+        self.output(
+            f"Attempting to get application ({app_model_name}) "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_Application"
+        body = {
+            "$filter": (
+                f"ModelName eq '{app_model_name}' "
+                "and IsLatest eq true"
+                ),
+            '$select': "CI_ID"}
+        app_search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if app_search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(app_search_response.status_code) or ''}]"
+                f"\tReason [{app_search_response.reason or ''}]"
+            )
+        if len(app_search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple application objects were "
+                "returned from the initial query"
+                )
+        if len(app_search_response.json()['value']) == 0:
+            self.output("No applications were found.", 2)
+            return {}
+
+        app_search_value = app_search_response.json()['value'][0]
+        app_ci_id = app_search_value.get('CI_ID')
+        self.output(f"Getting details for application with CI_ID {app_ci_id}", 3)
+        app_detail_url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                f"SMS_Application({app_ci_id})"
+            )
+        response = requests.request(
+            method = 'GET',
+            url = app_detail_url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code == 200 and len(app_search_response.json()['value']) == 1:
+            self.output("Found application by its model name", 3)
+            return response.json()['value'][0]
+        else:
+            self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
+            raise ProcessorError(response.reason)
+
+    def get_collection_by_name(self,collection_name) -> dict:
+        self.output(
+            f"Attempting to get collection ({collection_name}) "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_Collection"
+        body = {
+            "$filter": (f"Name eq '{collection_name}' "),
+            '$select': "CollectionID"}
+        collection_search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if collection_search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(collection_search_response.status_code) or ''}]"
+                f"\tReason [{collection_search_response.reason or ''}]"
+            )
+        if len(collection_search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple collection objects were "
+                "returned from the initial query"
+                )
+        if len(collection_search_response.json()['value']) == 0:
+            self.output("No collections were found.", 2)
+            return {}
+
+        collection_search_value = collection_search_response.json()['value'][0]
+        collection_id = collection_search_value.get('CollectionID')
+        self.output(f"Getting details for collection with ID {collection_id}", 3)
+        collection_detail_url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                f"SMS_Collection('{collection_id}')"
+            )
+        response = requests.request(
+            method = 'GET',
+            url = collection_detail_url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code == 200 and len(collection_search_response.json()['value']) == 1:
+            self.output("Found collection by its name", 3)
+            return response.json()['value'][0]
         else:
             self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
             raise ProcessorError(response.reason)
@@ -1492,7 +1672,72 @@ class McmApiBase(Processor):
             )
         return response.json().get('value', [])
 
-    
+    @staticmethod
+    def test_time_format(time_str:str) -> bool:
+        try:
+            _ = datetime.fromisoformat(time_str)
+            return True
+        except:
+            return False
+
+    def get_app_assignment(self,app_model_id : str,collection_id : str) -> dict:
+        self.output(
+            f"Attempting to get app assignments for app {app_model_id} "
+            f"to collection {collection_id} "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_ApplicationAssignment"
+        body = {
+            "$filter": (f"TargetCollectionID eq '{collection_id}' and AppModelId eq {app_model_id}"),
+            '$select': "AssignmentID"}
+        search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(search_response.status_code) or ''}]"
+                f"\tReason [{search_response.reason or ''}]"
+            )
+        if len(search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple objects were "
+                "returned from the initial query"
+                )
+        if len(search_response.json()['value']) == 0:
+            self.output("No assignment objects were found.", 2)
+            return {}
+        return search_response.json()['value'][0]
+
+    def delete_app_assignment(self,assignment_id) -> bool:
+        self.output(
+            f"Attempting to delete app assignment with id {assignment_id} "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_ApplicationAssignment({assignment_id})"
+        try:
+            response = requests.request(
+                method = 'DELETE',
+                url = url,
+                auth = self.get_mcm_auth(),
+                headers = self.headers,
+                verify = self.get_ssl_verify_param(),
+            )
+            if response.status_code in [200,201,204]:
+                self.output(f"Deleted assignment {assignment_id} [{response.status_code.__str__()}]", 3)
+                return True
+        except Exception as e:
+            self.output("Encountered an error whilst attempting to delete assignment.", 3)
+            return False
+        return False
+
+
 if __name__ == "__main__":
     PROCESSOR = McmApiBase()
     PROCESSOR.execute_shell()

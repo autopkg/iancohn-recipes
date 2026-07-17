@@ -64,7 +64,7 @@ class McmContentDistributionManager(McmContentDistributionManagerBase):
             "required": False,
             "description": "How to generate the kerberos configuration.",
             "options": ["auto","query","custom"],
-            "default": ["auto"]
+            "default": "auto",
         },
         "content_package_security_key": {
             "required": False,
