@@ -64,7 +64,7 @@ class McmAppDeployer(McmAppDeployerBase):
             "default": "auto"
         },
         "application_model_name": {
-            "required": True,
+            "required": False,
             "description": "The model name of the application to deploy. Defaults to app_model_name",
         },
         "assignment_action": {

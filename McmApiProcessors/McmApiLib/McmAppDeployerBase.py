@@ -276,7 +276,7 @@ class McmAppDeployerBase(McmApiBase):
                 "\n\tError Message: "
                 f"{post_json['error']['message']}"
                 )
-        
+
         self.response_value = post_json
         self.set_export_properties()
         
