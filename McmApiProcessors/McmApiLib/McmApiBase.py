@@ -1,7 +1,7 @@
 #!/usr/local/autopkg/python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2026 Ian Cohn
+# Copyright 2025 Ian Cohn
 # https://www.github.com/autopkg/iancohn-recipes
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -585,7 +585,7 @@ class McmApiBase(Processor):
     """
 
     # Global version
-    __version__ = "2026.07.17.0"
+    __version__ = "2026.07.10.0"
 
     @staticmethod
     def new_guid_str() -> str:
@@ -1634,9 +1634,8 @@ class McmApiBase(Processor):
 
     def get_distribution_point_groups(self) -> list:
         """Get a list of distribution point groups from the MCM server"""
-        self.output(f"Getting distribution point groups from {url}", 2)
         url = f"https://{self.fqdn}/AdminService/wmi/SMS_DistributionPointGroup"
-        self.output(f"Getting distribution point groups", 2)
+        self.output(f"Getting distribution point groups from {url}", 2)
         response = requests.request(
             method = 'GET',
             url = url,

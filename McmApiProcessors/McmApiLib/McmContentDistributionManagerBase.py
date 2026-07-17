@@ -53,7 +53,7 @@ class McmContentDistributionManagerBase(McmApiBase):
         self.fqdn = self.env.get('mcm_site_server_fqdn')
 
         self.content_package_security_key = self.env.get("content_package_security_key", self.env.get('app_model_name',''))
-        if self.content_package_security_key == '':
+        if self.content_package_security_key == '' or self.content_package_security_key is None:
             raise ProcessorError(
                 "No content package security key provided. "
                 "Please provide a value for content_package_security_key "
@@ -66,7 +66,13 @@ class McmContentDistributionManagerBase(McmApiBase):
                 "or distribution_point_names."
                 )
         self.action = self.env.get("action")
-        self.distribution_point_group_names = self.env.get("distribution_point_group_names", [])
+        self.distribution_point_group_names = []
+        
+        if type(self.env.get('distribution_point_group_names',[])).__name__ == 'list':
+            self.distribution_point_group_names.extend(self.env.get('distribution_point_group_names', []))
+        elif type(self.env.get('distribution_point_group_names',[])).__name__ == 'str':
+            self.distribution_point_group_names.append(self.env.get('distribution_point_group_names',''))
+        self.env.get("distribution_point_group_names", [])
         self.distribution_point_names = self.env.get("distribution_point_names", [])
         self.fail_on_dist_failure = self.env.get('fail_on_distribution_failure')
         self.env["content_distributed_successfully"] = False
@@ -80,7 +86,11 @@ class McmContentDistributionManagerBase(McmApiBase):
                 f"provided security key {self.content_package_security_key} exists."
             ),
             2)
-        content_package_search_url = f"https://{self.fqdn}/AdminService/wmi/SMS_ContentPackage?$filter=SecurityKey eq '{self.content_package_security_key}'"
+        time.sleep(10)
+        content_package_search_url = (
+            f"https://{self.fqdn}/AdminService/wmi/SMS_ContentPackage?$filter=SecurityKey eq "
+            f"'{self.content_package_security_key}'"
+        )
         content_package_search_response = requests.request(
             method = 'GET',
             url = content_package_search_url,
@@ -88,7 +98,7 @@ class McmContentDistributionManagerBase(McmApiBase):
             headers = self.headers,
             verify = self.get_ssl_verify_param(),
         )
-        if content_package_search_response.status_code != 200:
+        if False == (content_package_search_response.status_code in [200, 201]):
             raise ProcessorError(
                 f"Error searching for content package with security key {self.content_package_security_key}: "
                 f"{content_package_search_response.reason}"
