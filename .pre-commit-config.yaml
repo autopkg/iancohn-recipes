@@ -17,15 +17,11 @@ repos:
       - id: check-case-conflict
         exclude: ^McmApiProcessors/McmApiLib/vendor/
       - id: check-executables-have-shebangs
-        exclude: 
-          - ^McmApiProcessors/McmApiLib/vendor/
-          - ^SmbCopier/lib/vendor/
+        exclude: ^McmApiProcessors/McmApiLib/vendor/
       - id: check-merge-conflict
       - id: check-yaml
       - id: detect-private-key
-        exclude: 
-          - ^McmApiProcessors/McmApiLib/vendor/
-          - ^SmbCopier/lib/vendor/
+        exclude: ^McmApiProcessors/McmApiLib/vendor/
       - id: end-of-file-fixer
         exclude: ^McmApiProcessors/McmApiLib/vendor/
       - id: fix-byte-order-marker
