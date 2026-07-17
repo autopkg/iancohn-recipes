@@ -60,7 +60,7 @@ class McmObjectMover(McmObjectMoverBase):
             "required": False,
             "description": "How to generate the kerberos configuration.",
             "options": ["auto","query","custom"],
-            "default": ["auto"]
+            "default": "auto",
         },
         "object_class": {
             "required": False,

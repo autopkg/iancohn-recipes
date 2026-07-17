@@ -33,11 +33,12 @@ The following input variables are used in most of these processors.
 
 | Variable Name              | Description                                                                                                                                                           | Default Value                                                                     |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| keychain_password_service  | The name of the service used to register the credential in Keychain                                                                                                   | com.github.autopkg.iancohn-recipes.mcmapi                                         |
-| keychain_password_username | The username for the credential                                                                                                                                       | `<None>`                                                                        |
-| mcm_site_server_fqdn       | The FQDN of the site server hosting the SMS Provider role that you will connect to                                                                                    | `<None>`                                                                        |
-| mcm_ssl_verification       | Either a boolean, in which case it controls whether we verify the server’s TLS certificate, or a string, in which case it must be a path to a CA .pem bundle to use | False                                                                             |
-| *_export_properties        | A dictionary of properties to export as autopkg variables                                                                                                             | The default value differs depending on the processor.[See Below](#export_properties) |
+| keychain_password_service  | The name of the service used to register the credential in Keychain | com.github.autopkg.iancohn-recipes.mcmapi |
+| keychain_password_username | The username for the credential | `<None>` |
+| mcm_site_server_fqdn | The FQDN of the site server hosting the SMS Provider role that you will connect to | `<None>` |
+| mcm_ssl_verification | Either a boolean, in which case it controls whether we verify the server’s TLS certificate, or a string, in which case it must be a path to a CA .pem bundle to use | `False` |
+| krb_config_type | Whether to generate the kerberos configuration by 'auto' or 'query' methods | `auto` |
+| *_export_properties | A dictionary of properties to export as autopkg variables | The default value differs depending on the processor.[See Below](#export_properties) |
 
 # Processors
 
@@ -63,6 +64,61 @@ Set the administrative categories on an application
 ### Output Variables
 
 None
+
+## McmAppDeployer
+
+Create a deployment for an application object to a target collection
+
+### McmAppDeployer Input Variables
+
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
+| keychain_password_service | [See Above](#common-input-variables) | com.github.autopkg.iancohn-recipes.mcmapi |
+| keychain_password_username | [See Above](#common-input-variables) | `<None>` |
+| mcm_site_server_fqdn | [See Above](#common-input-variables) | `<None>` |
+| mcm_ssl_verification | [See Above](#common-input-variables) | `False` |
+| krb_config_type | [See Above](#common-input-variables) | `<None>` |
+| application_model_name | The model name of the application to deploy | `<None>` |
+| assignment_action | Whether to DETECT or APPLY the configuration item. **⚠️ Non-default values have not been tested** | `APPLY` |
+| collection_name | The collection name to target in the assignment | `<None>` |
+| assignment_description | A comment/description for the deployment | `<None>` |
+| deployment_enabled | Whether the deployment should be enabled | `True` |
+| enforcement_deadline | The date and time (in ISO format) when the deployment will begin being enforced. If not specified, will begin immediately with the start_time | `<None>` |
+| start_time | The date and time (in ISO format) when the deployment will begin. If not specified, will begin immediately | `<None>` |
+| use_utc_times | Whether start time and enforcement deadline times are in UTC (as opposed to client local time) | `False` |
+| soft_deadline_enabled | Delay enforcement of this deployment according to user preferences, up to the grace period defined in client settings | `False` |
+| wol_enabled | Whether or not to notify clients of the assignment via a Wake-on-Lan packet | `False` |
+| offer_type | Assign the application as REQUIRED or AVAILABLE | `REQUIRED` |
+| notify_user | Whether to notify users of the offer availability | `False` |
+| display_user_ui | Whether to display the UI to a logged on user | `False` |
+| install_outside_maintenance_window | Whether MCM will execute this deployment on clients outside of any maintenance windows configured for the type of deployment | `False` |
+| reboot_outside_maintenance_window | Whether MCM can force a reboot on clients executing the deployment outside of any maintenance windows configured for the type of deployment | `False` |
+| offer_flags | Offer flags for the assignment. [See below](#assignment-offer-flags) | `[]` |
+| assignment_name | Use a custom value for the assignment name. If not specified, one will be generated from details of the deployment. | `<application name>_<collection name>_<install type>` |
+| assignment_type | The assignment type. **⚠️ Non-default values have not been tested**  | `CIA_TYPE_APPLICATION` |
+| desired_config_type | The desired configuration type | `REQUIRED` |
+| disable_mom_alerts | True if the client is configured to raise MOM alerts when a configuration item is applied. **⚠️ Non-default values have not been tested**  | `False` |
+| dp_locality_flags | An array of flags determining how clients locate content, according to distribution point locality. | `["DP_DOWNLOAD_FROM_REMOTE","DP_DOWNLOAD_FROM_LOCAL"]` |
+| assignment_priority | The priority for installation of the application. **⚠️ Non-default values have not been tested**  | `MEDIUM` |
+| state_message_priority | The priority of state messages to be reported from clients. **⚠️ Non-default values have not been tested** |  |
+| log_compliance_to_win_event | Whether to log compliance events to the Windows Event Log | `False` |
+| suppress_reboot_on_client_types | A list of client types on which reboots should be suppressed | `["WORKSTATIONS","SERVERS"]` |
+| locale_id | The ID for the locale of the assignment name and description | 1033 |
+| mcm_app_deployer_export_properties | A dictionary of properties to export as autopkg variables | **deployment_object_class** - Populated with the value of the __CLASS property of a returned object<br />**deployment_assignment_id** - Populated with the value of the AssignmentID property of a returned object<br />**deployment_assignment_name** - Populated with the value of the AssignmentName property of a returned object<br />**deployment_collection_name** - Populated with the value of the CollectionName property of a returned object<br />**deployment_collection_id** - Populated with the value of the TargetCollectionID property of a returned object | 
+
+### Assignment Offer Flags
+
+[Microsoft's documentation](https://learn.microsoft.com/en-us/intune/configmgr/develop/reference/apps/sms_applicationassignment-server-wmi-class) on offer flags is lackluster.
+
+| Flag Value | Description |
+| ---------- | ----------- |
+| PREDEPLOY | Pre-deploy to users' primary device |
+| ONDEMAND | Unknown |
+| ENABLEPROCESSTERMINATION | Enable termination configured running processes |
+| ALLOWUSERSTOREPAIRAPP | Allow users to repair application |
+| RELATIVESCHEDULE | Unknown |
+| HIGHIMPACTDEPLOYMENT | Counter-intuitively, this flag enables the 'Show dialog instead of toast notification' checkbox |
+| REMOVEONCOLLECTIONDROP | Remove this application from devices which leave the targeted collection |
 
 ## McmAppGetter
 
@@ -102,6 +158,28 @@ Connect to an MCM AdminService and retrieve an application object, if it exists
 ### Output Variables
 
 Dynamic depending upon the configuration of the **mcm_app_uploader_export_properties** input variable
+
+### McmContentDistributionManager
+
+Connect to an MCM AdminService and create or remove content distribution jobs for SMS_ContentPackage objects
+
+### McmContentDistributionManager Input Variables
+
+| Variable Name | Description | Default Value |
+| ------------- | ----------- | ------------- |
+| content_package_security_key | The security key of the content package to distribute. | `%app_model_name`% |
+| action | The action to perform. Valid values are 'Add' or 'Remove'. | Add |
+| distribution_point_group_names | A list of distribution point group names to add or remove the content package from. | [] |
+| wait_for_distribution | If `True`, waits for the distribution jobs to complete before returning, up to the value specified in `timeout` | `True` |
+| timeout | The maximum time, in seconds, to wait for distributions to complete | 3600 |
+| fail_on_distribution_failure | If `True`, raise an exception when distribution fails | `True` |
+
+### Output Variables
+
+| Variable Name | Description |
+| ------------- | ----------- |
+| content_distributed_successfully | `True` if content distributions were successfully created and (if 'wait_for_distribution' is set to True) no errors occurred while monitoring the distribution status" |
+| content_removed_successfully | `True` if all content removals completed successfully |
 
 ## McmObjectMover
 

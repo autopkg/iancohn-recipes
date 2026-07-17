@@ -62,7 +62,7 @@ class McmCategoryGetter(McmCategoryGetterBase):
             "required": False,
             "description": "How to generate the kerberos configuration.",
             "options": ["auto","query","custom"],
-            "default": ["auto"]
+            "default": "auto",
         },
         "category_name": {
             "required": True,

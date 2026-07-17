@@ -68,7 +68,7 @@ class McmSDMPackageXMLGenerator(McmSDMPackageXMLGeneratorBase):
             "required": False,
             "description": "How to generate the kerberos configuration.",
             "options": ["auto","query","custom"],
-            "default": ["auto"]
+            "default": "auto",
         },
         "mcm_scope_id": {
             "required": False, 

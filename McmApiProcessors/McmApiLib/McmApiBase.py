@@ -1,7 +1,7 @@
 #!/usr/local/autopkg/python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2025 Ian Cohn
+# Copyright 2026 Ian Cohn
 # https://www.github.com/autopkg/iancohn-recipes
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +19,10 @@
 import atexit
 #import string
 #import random
-#import base64
+import base64
 from copy import deepcopy
 from ctypes import c_int32
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from io import BytesIO
 import json
@@ -138,6 +138,13 @@ class ArgumentType(Enum):
     Int32 = 'Int32'
     Int32Array = 'Int32[]'
 
+class ScriptParameterType(Enum):
+    """Valid ScriptParameterType values"""
+    String = 'System.String'
+    Integer = 'System.Int32'
+    List = 'System.String'
+    Boolean = 'System.Boolean'
+
 class RuleEvaluationMethod(Enum):
     """Valid Method values for Rule objects"""
     Count = "Count"
@@ -247,6 +254,72 @@ class DetectionType(Enum):
     MSI = "MSI"
     Group = "Group"
     CustomScript = "CustomScript"
+
+class OfferFlag(Enum):
+    """Valid OfferFlag values"""
+    PREDEPLOY = 1
+    ONDEMAND = 2
+    ENABLEPROCESSTERMINATION = 4
+    ALLOWUSERSTOREPAIRAPP = 8
+    RELATIVESCHEDULE = 16
+    HIGHIMPACTDEPLOYMENT = 32
+    REMOVEONCOLLECTIONDROP = 64
+
+class OfferType(Enum):
+    """Valid OfferType values"""
+    REQUIRED = 0
+    AVAILABLE = 2
+
+class InstallPriority(Enum):
+    """Valid Priority values for application assignments"""
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
+
+class AssignmentAction(Enum):
+    """Valid AssignmentAction values"""
+    DETECT = 1
+    APPLY = 2
+
+class AssignmentType(Enum):
+    """Valid AssignmentType values"""
+    CIA_TYPE_DCM_BASELINE = 0
+    CIA_TYPE_UPDATES = 1
+    CIA_TYPE_APPLICATION = 2
+    CIA_TYPE_UPDATE_GROUP = 5
+    CIA_TYPE_POLICY = 8
+
+class DesiredConfigType(Enum):
+    """Valid DesiredConfigType values"""
+    REQUIRED = 1
+    NOT_ALLOWED = 2
+
+class DesiredConfigTypeToShortAction(Enum):
+    REQUIRED = 'Install'
+    NOT_ALLOWED = 'Uninstall'
+
+class DPLocalityFlag(Enum):
+    """Valid DPLocality flag values"""
+    DP_DOWNLOAD_FROM_LOCAL = 64
+    DP_DOWNLOAD_FROM_REMOTE = 16
+    DP_NO_FALLBACK_UNPROTECTED = 17
+    #DP_ALLOW_WUMU = 18
+    #DP_ALLOW_METERED_NETWORK = 19
+    DP_ALLOW_METERED_NETWORK = 524288
+
+class StateMessagePriority(Enum):
+    """Valid StateMessagePriority values"""
+    URGENT = 0
+    HIGH = 1
+    NORMAL = 5
+    LOW = 10
+
+class SuppressRebootClientType(Enum):
+    """"Valid ClientType values for reboot suppression during application deployment"""
+    WORKSTATIONS = 0
+    SUPPRESS_REBOOT_WORKSTATIONS = 0
+    SERVERS = 1
+    SUPPRESS_REBOOT_SERVERS = 1
 
 PROPERTY_PATH_DATA_TYPE = {
     """Map PropertyPaths to valid DataType values"""
@@ -512,8 +585,11 @@ class McmApiBase(Processor):
     """
 
     # Global version
-    __version__ = "2025.12.04.0"
+    __version__ = "2026.07.17.0"
 
+    @staticmethod
+    def new_guid_str() -> str:
+        return uuid.uuid4().__str__()
     def get_int32_from_uuid(uuid:uuid.UUID):
         """Deterministically create an int from a given uuid"""
         uuid_hash = hash(uuid)
@@ -652,6 +728,117 @@ class McmApiBase(Processor):
         )
         if response.status_code == 200 and len(app_search_response.json()['value']) == 1:
             self.response_value = response.json()['value'][0]
+        else:
+            self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
+            raise ProcessorError(response.reason)
+
+    def get_application_by_model_name(self,app_model_name):
+        self.output(
+            f"Attempting to get application ({app_model_name}) "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_Application"
+        body = {
+            "$filter": (
+                f"ModelName eq '{app_model_name}' "
+                "and IsLatest eq true"
+                ),
+            '$select': "CI_ID"}
+        app_search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if app_search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(app_search_response.status_code) or ''}]"
+                f"\tReason [{app_search_response.reason or ''}]"
+            )
+        if len(app_search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple application objects were "
+                "returned from the initial query"
+                )
+        if len(app_search_response.json()['value']) == 0:
+            self.output("No applications were found.", 2)
+            return {}
+
+        app_search_value = app_search_response.json()['value'][0]
+        app_ci_id = app_search_value.get('CI_ID')
+        self.output(f"Getting details for application with CI_ID {app_ci_id}", 3)
+        app_detail_url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                f"SMS_Application({app_ci_id})"
+            )
+        response = requests.request(
+            method = 'GET',
+            url = app_detail_url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code == 200 and len(app_search_response.json()['value']) == 1:
+            self.output("Found application by its model name", 3)
+            return response.json()['value'][0]
+        else:
+            self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
+            raise ProcessorError(response.reason)
+
+    def get_collection_by_name(self,collection_name) -> dict:
+        self.output(
+            f"Attempting to get collection ({collection_name}) "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_Collection"
+        body = {
+            "$filter": (f"Name eq '{collection_name}' "),
+            '$select': "CollectionID"}
+        collection_search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if collection_search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(collection_search_response.status_code) or ''}]"
+                f"\tReason [{collection_search_response.reason or ''}]"
+            )
+        if len(collection_search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple collection objects were "
+                "returned from the initial query"
+                )
+        if len(collection_search_response.json()['value']) == 0:
+            self.output("No collections were found.", 2)
+            return {}
+
+        collection_search_value = collection_search_response.json()['value'][0]
+        collection_id = collection_search_value.get('CollectionID')
+        self.output(f"Getting details for collection with ID {collection_id}", 3)
+        collection_detail_url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                f"SMS_Collection('{collection_id}')"
+            )
+        response = requests.request(
+            method = 'GET',
+            url = collection_detail_url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code == 200 and len(collection_search_response.json()['value']) == 1:
+            self.output("Found collection by its name", 3)
+            return response.json()['value'][0]
         else:
             self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
             raise ProcessorError(response.reason)
@@ -816,7 +1003,15 @@ class McmApiBase(Processor):
         type name
         """
         return McmApiBase.try_cast(type_name, value) is not None
-
+    @staticmethod
+    def convert_to_b64(value: str) -> str:
+        """Convert a string to a base64 string"""
+        return base64.b64encode(value.encode('utf-8')).decode('utf-8')
+    @staticmethod
+    def convert_from_b64(value: str) -> str:
+        """Convert a base64 string to a regular string"""
+        return base64.b64decode(value.encode('utf-8')).decode('utf-8')
+    
     def get_identifier_from_string(self, string: str):
         """Return the simple uuid/guid string from an MCM identifier
         in '[Object Type]_[Guid] format'
@@ -1281,6 +1476,267 @@ class McmApiBase(Processor):
                 )
             self.env[k] = value
         self.output("Finished setting export properties", 2)
+
+    def get_script_by_name(self):
+        self.output(
+            f"Attempting to get script ({self.script_name}) "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_Scripts"
+        body = {"$filter": f"ScriptName eq '{self.script_name}' ",}
+        self.output(f"Body: {body}", 3)
+        script_search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if script_search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(script_search_response.status_code) or ''}]"
+                f"\tReason [{script_search_response.reason or ''}]"
+            )
+
+        if len(script_search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple script objects were "
+                "returned from the initial query"
+                )
+        if len(script_search_response.json()['value']) == 0:
+            self.output("No scripts were found.", 2)
+            self.response_value = {}
+            return
+        
+        self.output("Found script object",1)
+        self.output(f"ScriptGuid: {script_search_response.json()['value'][0].get('ScriptGuid')}", 3)
+        script_search_value = script_search_response.json()['value'][0]
+        script_guid = script_search_value.get('ScriptGuid')
+        self.output(f"Getting details for script {script_guid}", 3)
+        script_detail_url = (
+                f"https://{self.fqdn}/AdminService/wmi/"
+                f"SMS_Scripts({script_guid})"
+            )
+        response = requests.request(
+            method = 'GET',
+            url = script_detail_url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code == 200 and len(response.json()['value']) == 1:
+            self.response_value = response.json()['value'][0]
+        else:
+            self.output(f"Status code [{response.status_code}]\tReason ({response.reason})")
+            raise ProcessorError(response.reason)
+
+    @staticmethod
+    def new_script_parameter(
+            name:str,
+            type:str,
+            friendly_name:str = "",
+            description:str = "",
+            is_required:bool = False,
+            is_hidden:bool = False,
+            default_value:str = "",
+            min_value=-2147483648,
+            max_value=2147483647,
+            min_length:int = 1,
+            max_length:int = 1024,
+            regex_validator:str = "",
+            regex_error_message:str = "",
+            values: list = []
+            ) -> XmlNodeAsDict:
+        """Create a new script parameter object"""
+        int_param_default_min_value = -2147483648,
+        int_param_default_max_value = 2147483647,
+        str_param_default_min_length = 1,
+        str_param_default_max_length = 1024,
+        if False == (type in ScriptParameterType.__members__):
+            raise ProcessorError(f"Invalid script parameter type: {type}")
+        if type == 'Boolean' and False == (default_value in ['$True','$False','']):
+            raise ProcessorError(f"Invalid default value for Boolean parameter: {default_value}")
+
+        if friendly_name == "":
+            friendly_name = name
+
+        parameter_node = XmlNodeAsDict(
+            NodeName = "ScriptParameter",
+            Attributes = [
+                XmlAttributeAsDict(Name = "Name", Value = f"{name}"),
+                XmlAttributeAsDict(Name = "FriendlyName", Value = f"{friendly_name}"),
+                XmlAttributeAsDict(Name = "Type", Value = f"{ScriptParameterType[type].value}"),
+                XmlAttributeAsDict(Name = "Description", Value = f"{description}"),
+                XmlAttributeAsDict(Name = "IsRequired", Value = f"{is_required.__str__().lower()}"),
+                XmlAttributeAsDict(Name = "IsHidden", Value = f"{is_hidden.__str__().lower()}"),
+                XmlAttributeAsDict(Name = "DefaultValue", Value = f"{default_value}")
+            ]
+        )
+        child_nodes = []
+        if type == 'String':
+            if str_param_default_min_length > min_length or str_param_default_max_length > max_length:
+                raise ProcessorError(f"Invalid min/max length for String parameter: {min_length}/{max_length}")
+            child_nodes.append(XmlNodeAsDict(
+                NodeName = "Validators",
+                ChildNodes = [
+                    XmlNodeAsDict(
+                        NodeName = "StringValidator",
+                        Attributes = [
+                            XmlAttributeAsDict(Name = "MinLength", Value = f"{min_length}"),
+                            XmlAttributeAsDict(Name = "MaxLength", Value = f"{max_length}"),
+                            XmlAttributeAsDict(Name = "CustomErrorMessage", Value = f"{regex_error_message}"),
+                            XmlAttributeAsDict(Name = "Regex", Value = f"{regex_validator}")
+                        ]
+                    )
+                ]
+            ))
+        if type == 'Integer':
+            if int_param_default_min_value > min_value or int_param_default_max_value < max_value:
+                raise ProcessorError(f"Invalid min/max value for Integer parameter: {min_value}/{max_value}")
+            child_nodes.append(XmlNodeAsDict(
+                NodeName = "Validators",
+                ChildNodes = [
+                    XmlNodeAsDict(
+                        NodeName = "IntegerValidator",
+                        Attributes = [
+                            XmlAttributeAsDict(Name = "MinValue", Value = f"{min_value}"),
+                            XmlAttributeAsDict(Name = "MaxValue", Value = f"{max_value}"),
+                        ]
+                    )
+                ]
+            ))
+        if type == 'List':
+            for value in values:
+                child_nodes.append(XmlNodeAsDict(
+                    NodeName = "Value",
+                    NodeInnerText = value                    
+                ))
+        if type == 'Boolean':
+            pass
+        
+        if len(child_nodes) > 0:
+            parameter_node.append_child_nodes(child_nodes)
+        return parameter_node
+    @staticmethod
+    def new_script_parameters_node(script_parameters:list) -> XmlNodeAsDict:
+        """Create a new script parameters node"""
+        node = XmlNodeAsDict(
+            name="ScriptParameters",
+            attributes=[
+                XmlAttributeAsDict(Name="SchemaVersion",Value="1")
+            ],
+            children=script_parameters
+        )
+        return node
+
+    def get_distribution_point_groups(self) -> list:
+        """Get a list of distribution point groups from the MCM server"""
+        self.output(f"Getting distribution point groups from {url}", 2)
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_DistributionPointGroup"
+        self.output(f"Getting distribution point groups", 2)
+        response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(response.status_code) or ''}]"
+                f"\tReason [{response.reason or ''}]"
+            )
+        return response.json().get('value', [])
+    
+    def get_distribution_points(self) -> list:
+        """Get a list of distribution points from the MCM server"""
+        self.output(f"Getting distribution points from {url}", 2)
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_DistributionPoint"
+        self.output(f"Getting distribution points", 2)
+        response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            timeout = (2,5)
+        )
+        if response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(response.status_code) or ''}]"
+                f"\tReason [{response.reason or ''}]"
+            )
+        return response.json().get('value', [])
+
+    @staticmethod
+    def test_time_format(time_str:str) -> bool:
+        try:
+            _ = datetime.fromisoformat(time_str)
+            return True
+        except:
+            return False
+
+    def get_app_assignment(self,app_model_id : str,collection_id : str) -> dict:
+        self.output(
+            f"Attempting to get app assignments for app {app_model_id} "
+            f"to collection {collection_id} "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_ApplicationAssignment"
+        body = {
+            "$filter": (f"TargetCollectionID eq '{collection_id}' and AppModelId eq {app_model_id}"),
+            '$select': "AssignmentID"}
+        search_response = requests.request(
+            method = 'GET',
+            url = url,
+            auth = self.get_mcm_auth(),
+            headers = self.headers,
+            verify = self.get_ssl_verify_param(),
+            params = body
+        )
+        if search_response.status_code != 200:
+            raise ProcessorError(
+                f"Status [{str(search_response.status_code) or ''}]"
+                f"\tReason [{search_response.reason or ''}]"
+            )
+        if len(search_response.json()['value']) > 1:
+            raise ProcessorError(
+                "Multiple objects were "
+                "returned from the initial query"
+                )
+        if len(search_response.json()['value']) == 0:
+            self.output("No assignment objects were found.", 2)
+            return {}
+        return search_response.json()['value'][0]
+
+    def delete_app_assignment(self,assignment_id) -> bool:
+        self.output(
+            f"Attempting to delete app assignment with id {assignment_id} "
+            f"from {self.fqdn}",
+            2
+            )
+        url = f"https://{self.fqdn}/AdminService/wmi/SMS_ApplicationAssignment({assignment_id})"
+        try:
+            response = requests.request(
+                method = 'DELETE',
+                url = url,
+                auth = self.get_mcm_auth(),
+                headers = self.headers,
+                verify = self.get_ssl_verify_param(),
+            )
+            if response.status_code in [200,201,204]:
+                self.output(f"Deleted assignment {assignment_id} [{response.status_code.__str__()}]", 3)
+                return True
+        except Exception as e:
+            self.output("Encountered an error whilst attempting to delete assignment.", 3)
+            return False
+        return False
+
 
 if __name__ == "__main__":
     PROCESSOR = McmApiBase()

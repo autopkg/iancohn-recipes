@@ -61,7 +61,7 @@ class McmApplicationUploader(McmApplicationUploaderBase):
             "required": False,
             "description": "How to generate the kerberos configuration.",
             "options": ["auto","query","custom"],
-            "default": ["auto"]
+            "default": "auto",
         },
         "mcm_application_ci_id": {
             "required": False,
