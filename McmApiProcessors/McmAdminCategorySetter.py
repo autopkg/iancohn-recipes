@@ -29,7 +29,7 @@ from McmApiLib.McmAdminCategorySetterBase import (  # pylint: disable=import-err
     McmAdminCategorySetterBase,
 )
 
-__all__ = ["McmScopeSetter"]
+__all__ = ["McmAdminCategorySetter"]
 
 class McmAdminCategorySetter(McmAdminCategorySetterBase):
     description = """Sets the security scope of an MCM object.
