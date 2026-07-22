@@ -40,12 +40,19 @@ The following input variables are used by this processor.
 - Both *source_path* and *destination_path* can be either UNC\SMB or local paths. You can copy from SMB to SMB, SMB to Local, or Local to SMB
 - If *destination_path* ends with a trailing slash, the *source_path* item (file or folder) will retain its current name and be copied, as an object, inside of the destination.
 
-## SmbFolderCreator
-Create a folder in an SMB path
+## SmbCheckPath
+Check an SMB path to see if it exists. Technically this can also be used on POSIX style paths.
 
-### SmbFolderCreator Input Variables
+### SmbCheckPath Input Variables
+| Variable Name                  | Description                                                                     | Default Value |
+| ------------------------------ | ------------------------------------------------------------------------------- | ------------- |
+| smbcopier_keychain_servicename | The service name used to store the password                                     | `None`      |
+| smbcopier_keychain_username    | The username of the credential to retrieve                                      | `None`      |
+| smb_path                    | A path to a file or folder to check                                              | `None`      |
 
-## SmbPathChecker
-Check an SMB path to see if a path exists
-
-### SmbPathChecker Input Variables
+### Output Variables
+| Variable Name | Description |
+| ------------- | ----------- |
+| smb_path_exists | Returns `True` if the path exists, returns `None` if error encountered |
+| smb_path_is_dir | Returns `True` if the path exists and is a container/directory, returns `None` if item does not exist|
+| smb_path_is_file | Returns `True` if the path exists and is a file, returns `None` if item does not exist |
