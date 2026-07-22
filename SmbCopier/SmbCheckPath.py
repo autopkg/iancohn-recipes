@@ -28,10 +28,10 @@ from SmbCopierLib.SmbCopierBase import (  # pylint: disable=import-error, wrong-
     SmbCopierBase,
 )
 
-__all__ = ["SmbCopier"]
+__all__ = ["SmbCheckPath"]
 
 
-class SmbCopier(SmbCopierBase):
+class SmbCheckPath(SmbCopierBase):
     """This processor copies a file or folder to or from an SMB share using a credential stored in Keychain"""
    
     description = __doc__
@@ -44,31 +44,30 @@ class SmbCopier(SmbCopierBase):
             "required": True,
             "description": "The username of the credential to retrieve."
         },
-        "source_path": {
+        "smb_path": {
             "required": True,
-            "description": "Path to a file or directory to copy."
+            "description": "Path to a file or directory"
+        }
+    }
+    output_variables = {
+        "smb_path_exists": {
+            "description": "Returns True if the path exists, returns None if error encountered",
         },
-        "destination_path": {
-            "required": True,
-            "description": "SMB\\UNC formatted path to the destination."
+        "smb_path_is_dir": {
+            "description": "Returns True if the path exists and is a container/directory, returns None if item does not exist",
         },
-        "overwrite": {
-            "required": False,
-            "description": "Whether or not to overwrite the destination path if it already exists.",
-            "default": False,
+        "smb_path_is_file": {
+            "description": "Returns True if the path exists and is a file, returns None if item does not exist",
         },
     }
-    output_variables = {}
     
     def main(self):
         self.initialize_all()
-        self.try_smbcopy(
-            self.env.get('source_path'),
-            self.env.get('destination_path'),
-            create_path=True,
-            overwrite=self.env.get('overwrite',False)
-            )
+        self.check_smb_path(self.env.get('smb_path'))
+        self.env['smb_path_exists'] = self.smb_path_exists
+        self.env['smb_path_is_dir'] = self.smb_path_is_dir
+        self.env['smb_path_is_file'] = self.smb_path_is_file
 
 if __name__ == "__main__":
-    PROCESSOR = SmbCopier()
+    PROCESSOR = SmbCheckPath()
     PROCESSOR.execute_shell()

@@ -1,8 +1,8 @@
 # About SmbCopier
 
-This processor was born out of a somewhat pressing need to copy files/folders to/from SMB file shares without mounting the share, since this has tended (at least in my environment) to not perform well in scenarios where AutoPkg runs from a GitLab/GitHub runner.
+These processors were born out of a somewhat pressing need to copy files/folders to/from SMB file shares without mounting the share, since this has tended (at least in my environment) to not perform well in scenarios where AutoPkg runs from a GitLab/GitHub runner.
 
-I've created a specific directory for this processor since the required modules are 'vendored' with the processor. This keeps modifications from being needed to either AutoPkg or System python versions. It's possible someone has a better way to do this. If so, please contact me or start an Issue.
+I've created a specific directory for this suite of processors since the required modules are 'vendored' with the processors. This keeps modifications from being needed to either AutoPkg or System python versions. It's possible someone has a better way to do this. If so, please contact me or start an Issue.
 
 # Installation
 
@@ -17,7 +17,13 @@ username = "username@domain.com"
 security add-generic-password -a $username -s com.github.autopkg.iancohn-recipes.smbcopier -T '/Library/AutoPkg/Python3/Python.framework/Versions/Current/bin/python3' -U -w
 ```
 
-# Input Variables
+# Processors
+
+## SmbCopier
+
+Copy a folder or file between local/smb paths.
+
+### SmbCopier Input Variables
 
 The following input variables are used by this processor.
 
@@ -33,3 +39,13 @@ The following input variables are used by this processor.
 
 - Both *source_path* and *destination_path* can be either UNC\SMB or local paths. You can copy from SMB to SMB, SMB to Local, or Local to SMB
 - If *destination_path* ends with a trailing slash, the *source_path* item (file or folder) will retain its current name and be copied, as an object, inside of the destination.
+
+## SmbFolderCreator
+Create a folder in an SMB path
+
+### SmbFolderCreator Input Variables
+
+## SmbPathChecker
+Check an SMB path to see if a path exists
+
+### SmbPathChecker Input Variables
