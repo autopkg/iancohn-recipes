@@ -308,14 +308,15 @@ class SmbCopierBase(Processor):
             self.smb_path_is_dir = None
             self.smb_path_is_file = None
 
+            path_type = 'smb' if self.is_smb(smb_path) else 'local'
             if smb_path is None or smb_path == '':
                 raise ProcessorError(f"Provided path [{smb_path}] is invalid")
             elif False == self.is_smb(path=smb_path):
-                raise ProcessorError(f"Path [{smb_path}] is not an SMB path")
+                self.output(f"WARNING: Path [{smb_path}] is not an SMB path. Maybe this isn't the right processor?", 1)
             
             self.output(f"Checking path: {smb_path}", 3)
-            self.smb_path_exists = self.filesystem['smb']['exists'](smb_path)
-            self.smb_path_is_dir = None if False == self.smb_path_exists else self.filesystem['smb']['isdir'](smb_path)
+            self.smb_path_exists = self.filesystem[path_type]['exists'](smb_path)
+            self.smb_path_is_dir = None if False == self.smb_path_exists else self.filesystem[path_type]['isdir'](smb_path)
             self.smb_path_is_file = None if False == self.smb_path_exists else False == self.smb_path_is_dir
 
         except Exception as e:
