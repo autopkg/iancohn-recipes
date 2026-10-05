@@ -33,6 +33,7 @@ import shutil
 import subprocess
 import tempfile
 import uuid
+import zipfile
 
 # to use a base/external module in AutoPkg we need to add this path to the sys.path.
 # this violates flake8 E402 (PEP8 imports) but is unavoidable, so the following
@@ -46,13 +47,8 @@ vendor_path = os.path.join(os.path.dirname(__file__),"vendor",platform_name,arch
 if vendor_path not in sys.path:
     sys.path.insert(0, vendor_path)
 
-#import dns.resolver
-import keyring
-import requests
-import smbclient
-#from requests_gssapi import HTTPKerberosAuth, OPTIONAL
-#from lxml import etree
-
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from autopkglib import ( # pylint: disable=import-error
     Processor,
@@ -61,20 +57,40 @@ from autopkglib import ( # pylint: disable=import-error
 
 class IntuneProcessorBase(Processor):
     """Common functions needed for Intune processors"""
+    @staticmethod
+    def pad_pkcs7(data: bytes, block_size_bits: int = 128) -> bytes:
+        """Pads input byte array to match AES block size requirements using PKCS#7."""
+        padder = padding.PKCS7(block_size_bits).padder()
+        return padder.update(data) + padder.finalize()
+
+    @staticmethod
+    def create_source_zip(source_folder: str) -> bytes:
+        """
+        Zips all non-hidden files within the source directory into an in-memory buffer.
+        Ensures ZIP path separators use forward slashes (POSIX) for cross-platform compliance.
+        """
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, _, files in os.walk(source_folder):
+                for file in files:
+                    if file.startswith("."):
+                        continue  # Ignore OS hidden files (.DS_Store, etc.)
+                    abs_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(abs_path, source_folder)
+                    posix_path = rel_path.replace("\\", "/")
+                    zf.write(abs_path, posix_path)
+        return zip_buffer.getvalue()
+
+    @staticmethod
+    def encrypt_content(unencrypted_bytes: bytes, key: bytes, iv: bytes) -> bytes:
+        """Encrypts content using AES-256-CBC mode with PKCS#7 padding."""
+        padded_data = IntuneProcessorBase.pad_pkcs7(unencrypted_bytes, 128)
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        encryptor = cipher.encryptor()
+        return encryptor.update(padded_data) + encryptor.finalize()
+    
     def initialize_auth(self):
-        #self.initialize_ntlm_auth()
         self.output("Checking supplied parameters", 3)
-        self.keychain_service_name = self.env.get("keychain_password_service")
-        self.keychain_username = self.env.get("keychain_password_username", None) or self.env.get("MCMAPI_USERNAME", '')
-        self.fqdn = self.env.get("mcm_site_server_fqdn", '')
-        if (self.fqdn == None or self.fqdn == ''):
-            raise ValueError("mcm_site_server_fqdn cannot be blank")
-        if (self.keychain_service_name == None or self.keychain_service_name == ''):
-            raise ValueError("keychain_password_service cannot be blank")
-        if (self.keychain_username == None or self.keychain_username == ''):
-            raise ValueError("keychain_password_username cannot be blank")
-        self.password = keyring.get_password(self.keychain_service_name, self.keychain_username)
-        self.initialize_gss_auth()
 
 if __name__ == "__main__":
     PROCESSOR = IntuneProcessorBase()
