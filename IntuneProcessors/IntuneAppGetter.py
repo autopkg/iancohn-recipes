@@ -36,64 +36,48 @@ class IntuneAppGetter(IntuneAppGetterBase):
     Service and retrieve an application object, if it exists
     """
     input_variables = {
-        "keychain_password_service": {
+        "intune_app_keychain_service": {
             "required": False,
             "description": "The service name used to store the password. Defaults to com.github.autopkg.iancohn-recipes.mcmapi",
-            "default": 'com.github.autopkg.iancohn-recipes.mcmapi'
+            "default": 'com.github.autopkg.iancohn-recipes.intuneprocessors'
         },
-        "keychain_password_username": {
+        "intune_app_keychain_username": {
             "required": False,
-            "description": "The username of the credential to retrieve. Defaults to %MCMAPI_USERNAME%"
+            "description": "The username of the credential to retrieve."
         },
-        "mcm_site_server_fqdn": {
+        "intune_app_client_id": {
             "required": True,
-            "description": "The FQDN of the site server. Ex. mcm.domain.com"
+            "description": "The client id of the app registration with permissions to Intune"
         },
-        "mcm_ssl_verification": {
-            "required": False,
-            "description": 
-                "Either a boolean, in which case it controls whether we verify the "
-                "server’s TLS certificate, or a string, in which case it must be a "
-                "path to a CA bundle to use",
-            "default": False
+        "intune_tenant_id": {
+            "required": True,
+            "description": "The tenant id for the Intune tenant and app registration",
         },
-        "krb_config_type": {
-            "required": False,
-            "description": "How to generate the kerberos configuration.",
-            "options": ["auto","query","custom"],
-            "default": "auto",
-        },
-        #krb_config_path
         "application_name": {
             "required": True,
             "description": "The name of the application in MCM to search for."
         },
-        "mcm_app_getter_export_properties": {
+        "intune_app_getter_export_properties": {
             "required": False,
             "default": {
-                "existing_app_ci_id": {"type": "property", "raise_error": False,"options": {"property": "CI_ID"}},
-                "existing_app_sdmpackagexml": {"type": "property", "raise_error": False,"options": {"property": "SDMPackageXML"}},
-                "existing_app_securityscopes": {"type": "property", "raise_error": False,"options": {"property": "SecuredScopeNames"}}
+                "existing_app_id": {"type": "property", "raise_error": False,"options": {"property": "id"}},
+                "existing_app_install_cli": {"type": "property", "raise_error": False,"options": {"property": "installCommandLine"}},
+                "existing_app_publishing_state": {"type": "property", "raise_error": False,"options": {"property": "publishingState"}},
+                "existing_app_content_version": {"type": "property", "raise_error": False,"options": {"property": "committedContentVersion"}},
             },
             "description": 
                 "A dictionary specifying the properties to retrieve, and the AutoPkg variables to use to store the output. "
                 "Each key name specified will be used as the AutoPkg variable name; each value should be populated by a dictionary "
-                "representing how to retrieve the property from the MCM application. Supported retrieval types are 'property' and 'xpath'. "
+                "representing how to retrieve the property from the application. For Intune apps, only 'property' is supported. "
                 "'raise_error' specifies whether to raise an error if the property cannot be found. "
                 ""
-                "'property' type options require an 'expression' option specifying the property name to retrieve from the MCM application. "
+                "'property' type options require an 'expression' option specifying the property name to retrieve from the application. "
                 "'xpath' type options require a 'property' option specifying the property name (generally 'SDMPackageXML') to run the xpath query against, and an 'expression'. "
-                "The 'strip_namespaces' option may also be specified to indicate whether to strip namespaces from the XML before evaluating the xpath expression."
-                "The 'select_value_index' option may also be specified to indicate which value to select from the xpath result set (default is '*' (return all values as an array list)). "
-                "Positive or negative integers may be specified to select a specific index from the result set (0-based). Negative integers count from the end of the result set (-1 is the last item))."
         }
     }
     output_variables = {
-        "mcm_scope_id": {
-            "description": "The scope id returned from the site."
-        },
-        "mcm_application_found": {
-            "description": "Returns True if the application was found in the MCM instance, otherwise, returns false."
+        "intune_application_found": {
+            "description": "Returns True if the application was found in the Intune instance, otherwise, returns false."
         }
     }
     

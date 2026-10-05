@@ -32,23 +32,22 @@ from IntuneLib.IntuneProcessorBase import ( #noqa: E402
 )
 
 class IntuneAppGetterBase(IntuneProcessorBase):
-    """Search MCM for an application and return the specified
+    """Search Intune for an application and return the specified
     export properties
     """
     def initialize_all(self):
-        self.initialize_headers()
+        #self.initialize_headers()
+        #self.initialize_ssl_verification()
         self.initialize_auth()
-        self.initialize_ssl_verification()
-        self.initialize_export_properties("mcm_app_getter_export_properties")
-        self.fqdn = self.env.get('mcm_site_server_fqdn')
+        self.initialize_export_properties("intune_app_getter_export_properties")
         self.application_name = self.env.get('application_name')
 
     def execute(self):
-        self.env['mcm_application_found'] = False
+        self.env['intune_application_found'] = False
         self.initialize_all()
-        self.get_application_by_name()
+        self.get_intune_app_by_name(self.application_name)
         if self.response_value is not None and self.response_value != {}:
-            self.env['mcm_application_found'] = True
+            self.env['intune_application_found'] = True
             self.set_export_properties()
         else:
             self.output("No application found; no export properties will be set", 3)
