@@ -136,11 +136,11 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
     def new_content_importer(
             self, content_location: str, content_location_local: str,
             content_id: str = None, enable_peer_cache: bool = True,
+            fallback_to_unprotected_dp: bool = False,
             fast_network_action: ContentHandlingMode =
             ContentHandlingMode['Download'], 
             slow_network_action: ContentHandlingMode =
-            ContentHandlingMode['DoNothing']
-            ) -> XmlNodeAsDict:
+            ContentHandlingMode['DoNothing']) -> XmlNodeAsDict:
         """Create a new Content node as an XmlNodeAsDict object"""
         if content_id is None or content_id == '':
                 content_id = f'Content_{uuid.uuid4().__str__()}'
@@ -172,6 +172,12 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
             peer_cache = XmlNodeAsDict(NodeName = 'PeerCache')
             peer_cache.set_node_inner_text(f"{enable_peer_cache}".lower())
             importer.append_child_node([peer_cache])
+            if False != fallback_to_unprotected_dp:
+                fallback_to_unprotected_dp_node = XmlNodeAsDict(
+                    NodeName='FallbackToUnprotectedDP',
+                    NodeInnerText='true'
+                    )
+                importer.append_child_node([fallback_to_unprotected_dp_node])
             on_fast_network = XmlNodeAsDict(NodeName = 'OnFastNetwork')
             on_fast_network.set_node_inner_text(f"{fast_network_action.name}")
             importer.append_child_node([on_fast_network])
@@ -1598,6 +1604,7 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
                 "content_location": content_path, 
                 "content_location_local": local_content_path, 
                 "enable_peer_cache": deployment_type_configuration.get('Options', {}).get('EnablePeerCache', True), 
+                "fallback_to_unprotected_dp": deployment_type_configuration.get('Options', {}).get('FallbackToUnprotectedDP', True),
                 "fast_network_action": ContentHandlingMode(deployment_type_configuration.get('Options', {}).get('OnFastNetwork', 'Download')), 
                 "slow_network_action": ContentHandlingMode(deployment_type_configuration.get('Options', {}).get('OnSlowNetwork', 'Download'))
             }
