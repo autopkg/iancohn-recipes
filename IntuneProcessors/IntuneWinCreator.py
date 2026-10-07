@@ -70,7 +70,27 @@ class IntuneWinCreator(IntuneWinCreatorBase):
         "intunewin_unencrypted_filesize": {
             "description": "The filesize of the unencrypted intunewin archive"
         },
-
+        "intunewin_encryption_key": {
+            "description": "The encryption key for the generated intunewin file"
+        },
+        "intunewin_mac_key": {
+            "description": "The mac key for the generated intunewin file"
+        },
+        "intunewin_mac": {
+            "description": "The mac for the generated intunewin file"
+        },
+        "intunewin_initialization_vector": {
+            "description": "The initialization vector for the generated intunewin file"
+        },
+        "intunewin_file_digest": {
+            "description": "The file digest for the generated intunewin file"
+        },
+        "intunewin_file_digest_algorithm": {
+            "description": "The file digest algorithm for the generated intunewin file"
+        },
+        "intunewin_profile_identifier": {
+            "description": "The profile_identifier for the generated intunewin file"
+        },
     }
     
     __doc__ = description

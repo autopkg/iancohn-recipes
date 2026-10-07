@@ -59,6 +59,8 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         mac_b64: str,
         file_digest_b64: str,
         tool_version: str = TOOL_VERSION,
+        profile_identifier: str = 'ProfileVersion1',
+        file_digest_algorithm: str = 'SHA256',
     ) -> str:
         """
         Generates Detection.xml matching the exact XML schema produced by Microsoft's Intune Content Prep Tool.
@@ -75,9 +77,9 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
             f'<MacKey>{mac_key_b64}</MacKey>\r\n'
             f'<InitializationVector>{iv_b64}</InitializationVector>\r\n'
             f'<Mac>{mac_b64}</Mac>\r\n'
-            f'<ProfileIdentifier>ProfileVersion1</ProfileIdentifier>\r\n'
+            f'<ProfileIdentifier>{profile_identifier}</ProfileIdentifier>\r\n'
             f'<FileDigest>{file_digest_b64}</FileDigest>\r\n'
-            f'<FileDigestAlgorithm>SHA256</FileDigestAlgorithm>\r\n'
+            f'<FileDigestAlgorithm>{file_digest_algorithm}</FileDigestAlgorithm>\r\n'
             f'</EncryptionInfo>\r\n'
             f'</ApplicationInfo>'
         )
@@ -117,6 +119,8 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         mac_key_b64 = base64.b64encode(mac_key).decode("utf-8")
         iv_b64 = base64.b64encode(iv).decode("utf-8")
         mac_b64 = base64.b64encode(mac).decode("utf-8")
+        profile_identifier = 'ProfileVersion1'
+        file_digest_algorithm = 'SHA256'
 
         # IntuneWinAppUtil 48-byte binary header layout:
         # Bytes 0..31: HMAC-SHA256 signature (32 bytes)
@@ -133,6 +137,8 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
             mac_b64=mac_b64,
             file_digest_b64=file_digest_b64,
             tool_version=TOOL_VERSION,
+            profile_identifier=profile_identifier,
+            file_digest_algorithm=file_digest_algorithm
         )
 
         output_path = os.path.join(output_folder, output_filename)
@@ -148,7 +154,14 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
             outer_zip.writestr("IntuneWinPackage/Contents/IntunePackage.intunewin", packaged_content)
             outer_zip.writestr("IntuneWinPackage/Metadata/Detection.xml", detection_bytes)
 
-        self.output("successfully created .intunewin file", 1)
+        self.env['intunewin_encryption_key'] = encryption_key
+        self.env['intunewin_mac_key'] = mac_key_b64
+        self.env['intunewin_mac'] = mac_b64
+        self.env['intunewin_initialization_vector'] = iv_b64
+        self.env['intunewin_file_digest'] = file_digest_b64
+        self.env['intunewin_file_digest_algorithm'] = file_digest_algorithm
+        self.env['intunewin_profile_identifier'] = profile_identifier
+        self.output("Successfully created .intunewin file", 1)
 
     def initialize_all(self):
         pass
@@ -175,6 +188,7 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
                 output_filename=output_filename
             )
             self.env['intunewin_filepath'] = destination_filepath
+            
         except Exception as e:
             raise ProcessorError(f"Failed to create IntuneWin file: {e}")
 
