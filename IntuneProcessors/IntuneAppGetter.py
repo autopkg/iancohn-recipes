@@ -32,8 +32,8 @@ from IntuneLib.IntuneAppGetterBase import (  # pylint: disable=import-error, wro
 __all__ = ["IntuneAppGetter"]
 
 class IntuneAppGetter(IntuneAppGetterBase):
-    description = """AutoPkg Processor to connect to an MCM Admin
-    Service and retrieve an application object, if it exists
+    description = """AutoPkg Processor to connect to Intune 
+    and retrieve an application object, if it exists
     """
     input_variables = {
         "intune_app_keychain_service": {
