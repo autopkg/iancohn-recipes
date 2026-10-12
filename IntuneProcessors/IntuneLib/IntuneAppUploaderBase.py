@@ -154,6 +154,18 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             self.output("Done with rule")
 
         self.output("Finished with requirement rules", 2)         
+        icon_path = self.env.get('application_icon_unix_path')
+
+        if icon_path is not None and icon_path != '':
+            self.output("Getting icon data", 2)
+            icon, mime_type = self.encode_icon(local_path = icon_path)
+            icon_data = {
+                '@odata.type': '#microsoft.graph.mimeContent',
+                'type': mime_type,
+                'value': icon
+            }
+        else:
+            icon_data = {}
 
         self.output("Collecting app payload", 2)
         app_payload = {
@@ -173,6 +185,7 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
                 'deviceRestartBehavior': self.env.get('restart_behavior'),
             },
             'detectionRules': detection_rules,
+            'largeIcon': icon_data,
         }
         if len(requirement_rules) > 0:
             app_payload['requirementRules'] = requirement_rules,

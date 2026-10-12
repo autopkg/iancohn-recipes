@@ -24,6 +24,7 @@ import platform
 import zipfile
 import time
 import base64
+import mimetypes
 import json
 
 # to use a base/external module in AutoPkg we need to add this path to the sys.path.
@@ -71,6 +72,7 @@ from autopkglib import ( # pylint: disable=import-error
 )
 
 GRAPH_BASE_URL = 'https://graph.microsoft.com'
+INTUNE_MAX_ICON_SIZE = 750 * 1024 # 750 KB
 # Helper functions
 def validate_enum(enum_cls: Type[E], value: Any) -> E:
     """Validates and converts any value against any Enum class.
@@ -512,6 +514,43 @@ class IntuneProcessorBase(Processor):
         except:
             return default
         
+    def encode_icon(
+            self,
+            local_path: str,
+            b64_encoding: str = 'utf-8',
+            optimize: bool = True,
+            skip_size_check : bool = False
+            ) -> tuple:
+        """Inspect an icon .png file, encode the binary data, and return
+        the resulting Base64 string
+        """
+        self.output("Encoding icon data", 3)
+        if not local_path.lower().endswith('.png'):
+            raise ProcessorError("Only PNG files are supported for icons.")
+        mime_type, _ = mimetypes.guess_type(local_path)
+        if not mime_type:
+            mime_type = 'image/png'
+
+        with open(local_path, 'rb') as f:
+            icon_bytes = f.read()
+        encoded = base64.b64encode(icon_bytes).decode(b64_encoding)
+        if skip_size_check == True:
+            self.output("Checking resulting image size", 3)
+            size = self.get_base64_string_size(encoded)
+            if size > INTUNE_MAX_ICON_SIZE:
+                raise ProcessorError(f"Image  size [{(str(size / 1024).__floor__())} KB]is too large for use in Intune")
+            self.output("Image size is ok.", 3)
+        else:
+            self.output("Skipping size check on icon string", 3)
+        return encoded, mime_type
+    @staticmethod
+    def get_base64_string_size(b64_string : str) -> int:
+        clean_string = b64_string.split(',')[-1].strip()
+        string_len = len(clean_string)
+        padding = clean_string.count('=')
+        filesize = int((string_len * 3) / 4) - padding
+        return filesize
+
     def get_intune_app_by_name(self,application_name : str):
         self.output(f'Searching Intune for application with name [{application_name}]',3)
         url = f"{GRAPH_BASE_URL}/v1.0/deviceAppManagement/mobileApps"

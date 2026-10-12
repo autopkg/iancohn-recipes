@@ -74,6 +74,10 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "required": True,
             "description": "The publisher of the application"
         },
+        "application_icon_unix_path": {
+            "required": False,
+            "description": "A local unix path to a local icon file to use for the application."
+        },
         "application_install_commandline": {
             "required": True,
             "description": "The full command line needed to execute the installation",
