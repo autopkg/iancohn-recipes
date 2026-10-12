@@ -142,17 +142,12 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         )
 
         output_path = os.path.join(output_folder, output_filename)
-        self.output(f"Writing outer .intunewin package to {output_path}", 3)
 
         # Outer archive layout matching Microsoft Intune Content Prep Tool ZIP structure:
         # 1. Store mode (ZIP_STORED / Method 0) without secondary compression
         # 2. No explicit directory entries
         # 3. UTF-8 BOM (\xef\xbb\xbf) prefix for Detection.xml matching .NET StreamWriter
         detection_bytes = b"\xef\xbb\xbf" + detection_xml.encode("utf-8")
-
-        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_STORED) as outer_zip:
-            outer_zip.writestr("IntuneWinPackage/Contents/IntunePackage.intunewin", packaged_content)
-            outer_zip.writestr("IntuneWinPackage/Metadata/Detection.xml", detection_bytes)
 
         self.env['intunewin_encryption_key'] = encryption_key
         self.env['intunewin_mac_key'] = mac_key_b64
@@ -161,7 +156,22 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         self.env['intunewin_file_digest'] = file_digest_b64
         self.env['intunewin_file_digest_algorithm'] = file_digest_algorithm
         self.env['intunewin_profile_identifier'] = profile_identifier
+        self.env['intunewin_setup_filename'] = setup_file
         self.output("Successfully created .intunewin file", 1)
+
+        if not self.env.get('intunewin_disable_metadata_archive', True):
+            self.output("Full Metadata archive creation disabled. Simply creating the encrypted archive.", 2)
+            output_path = os.path.join(output_folder,'IntunePackage.intunewin')
+            self.env['intunewin_filepath'] = output_path
+            with open(output_path, "wb") as encrypted_zip:
+                encrypted_zip.write(packaged_content)
+            self.output("Done", 1)
+            return
+
+        self.output(f"Writing outer .intunewin package to {output_path}", 3)
+        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_STORED) as outer_zip:
+            outer_zip.writestr("IntuneWinPackage/Contents/IntunePackage.intunewin", packaged_content)
+            outer_zip.writestr("IntuneWinPackage/Metadata/Detection.xml", detection_bytes)
 
     def initialize_all(self):
         pass

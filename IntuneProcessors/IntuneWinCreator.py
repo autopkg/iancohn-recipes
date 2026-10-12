@@ -43,6 +43,15 @@ class IntuneWinCreator(IntuneWinCreatorBase):
             "required": True,
             "description": "The setup file included in the archive. Can be an MSI,PS1, or EXE file",
         },
+        "intunewin_disable_metadata_archive": {
+            "required": False,
+            "description": (
+                "When uploading using Graph API, intune takes only the inner "
+                "encrypted payload. Set this argument to True to skip wrapping "
+                "the encrypted archive with its metadata"
+            ),
+            "default": False
+        },
         "intunewin_output_filename": {
             "required": False,
             "description": (
@@ -62,6 +71,7 @@ class IntuneWinCreator(IntuneWinCreatorBase):
             "description": "If True, overwrite an existing file at the output location",
             "default": False,
         },
+
     }
     output_variables = {
         "intunewin_filepath": {

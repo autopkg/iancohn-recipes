@@ -25,6 +25,7 @@ from autopkglib import (  # pylint: disable=import-error
 # imports require noqa comments for E402
 import os.path
 import sys
+#import json
 
 sys.path.insert(0,os.path.dirname(__file__))
 from IntuneLib.IntuneProcessorBase import ( #noqa: E402
@@ -39,12 +40,16 @@ class IntuneAppGetterBase(IntuneProcessorBase):
         self.initialize_auth()
         self.initialize_export_properties("intune_app_getter_export_properties")
         self.application_name = self.env.get('application_name')
+        self.output(json.dumps(self.graph_headers()))
 
     def execute(self):
         self.env['intune_application_found'] = False
         self.initialize_all()
-        self.get_intune_app_by_name(self.application_name)
-
+        
+        self.response_value = self.get_intune_app_by_name(self.application_name)
+        
+        #self.output(json.dumps(self.response_value), 3)
+        
         if self.response_value is not None and self.response_value != {}:
             self.env['intune_application_found'] = True
             self.set_export_properties()
