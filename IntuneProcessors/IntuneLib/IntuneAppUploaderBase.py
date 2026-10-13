@@ -76,6 +76,11 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             )
         unencrypted_filesize = self.try_cast(type_name = int,value = _unencrypted_filesize)
 
+        _encrypted_filesize = self.env.get(
+            'encrypted_filesize',
+            self.env.get('intunewin_encrypted_filesize')
+            )
+        encrypted_filesize = self.try_cast(type_name = int,value = _encrypted_filesize)
         encryption_key = self.env.get(
             'encryption_key',
             self.env.get('intunewin_encryption_key','')
@@ -102,26 +107,13 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             ):
             raise ProcessorError("Encryption info parameters must be defined when using .intunewin files")
 
-        
         minimum_supported_os = self.env.get('minimum_supported_os', '1607')
         app_type = validate_enum(IntuneOdataType,self.env.get('application_type')).value
 
         all_rules = []
-
         detection_rules = []
-        # Included rule is just for testing.
-        #configured_detection_rules = #self.env.get('detection_rules',
-        configured_detection_rules = [{
-            'rule_short_odata_type': 'Win32LobAppFileSystemRule',
-            'options': {
-                'path': 'C:\\path\\to\\folder',
-                'operation_type': 'exists',
-                'operator': 'notConfigured',
-                'filesystem_object_name': 'File.txt',
-                'check_x32_on_x64': False
-            }
-        }]
-        #)
+        configured_detection_rules = self.env.get('detection_rules')
+
         self.output(f"Iterating over {len(configured_detection_rules)} detection rules", 2)
         for detection_rule in configured_detection_rules:
             self.output("Begin inspecting detection rule", 3)
@@ -168,9 +160,9 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             }
         else:
             icon_data = {}
-
         
         max_run_time = self.try_cast(type_name=int,value=self.env.get('max_run_time'),default=60)
+
         install_experience = {
             'runAsAccount': self.env.get('installation_runas'),
             #'maxRunTimeInMinutes': max_run_time, # not supported on v1.0 endpoint
@@ -218,6 +210,7 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             application_id=app_id,
             odata_type_str=new_app['@odata.type'],
             content_version_id=content_version,
+            encrypted_filesize=encrypted_filesize,
             unencrypted_size=unencrypted_filesize,
             wait=True
             )

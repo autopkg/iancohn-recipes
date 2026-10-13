@@ -96,7 +96,7 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         self.output("Creating .intunewin file", 1)
         self.output("Compressing source directory into inner ZIP archive", 3)
         unencrypted_zip = self.create_source_zip(source_folder)
-        
+
         # IntuneWinAppUtil sets UnencryptedContentSize to the byte length of the unencrypted inner ZIP payload
         self.env['intunewin_unencrypted_size'] = len(unencrypted_zip)
 
@@ -172,6 +172,8 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_STORED) as outer_zip:
             outer_zip.writestr("IntuneWinPackage/Contents/IntunePackage.intunewin", packaged_content)
             outer_zip.writestr("IntuneWinPackage/Metadata/Detection.xml", detection_bytes)
+
+        self.env['intunewin_encrypted_filesize'] = os.path.getsize(output_path)
 
     def initialize_all(self):
         pass

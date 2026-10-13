@@ -46,8 +46,7 @@ class IntuneWinCreator(IntuneWinCreatorBase):
         "intunewin_disable_metadata_archive": {
             "required": False,
             "description": (
-                "When uploading using Graph API, intune takes only the inner "
-                "encrypted payload. Set this argument to True to skip wrapping "
+                "Set this argument to True to skip wrapping "
                 "the encrypted archive with its metadata"
             ),
             "default": False
@@ -78,7 +77,10 @@ class IntuneWinCreator(IntuneWinCreatorBase):
             "description": "The full path to the created file"
         },
         "intunewin_unencrypted_filesize": {
-            "description": "The filesize of the unencrypted intunewin archive"
+            "description": "The filesize of the inner intunewin archive prior to encrypting it"
+        },
+        "intunewin_encrypted_filesize": {
+            "description": "The filesize of the inner intunewin archive following its encryption"
         },
         "intunewin_encryption_key": {
             "description": "The encryption key for the generated intunewin file"

@@ -149,6 +149,10 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "required": False,
             "description": "The filesize of the unencrypted file. Defaults to intunewin_unencrypted_filesize"
         },
+        "encrypted_filesize": {
+            "required": False,
+            "description": "The filesize of the encrypted file. Defaults to intunewin_encrypted_filesize"
+        },
         "encryption_key": {
             "required": False,
             "description": "The encryption key. If uploading a .intunewin file, defaults to intunewin_encryption_key"
