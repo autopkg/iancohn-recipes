@@ -159,7 +159,7 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         self.env['intunewin_setup_filename'] = setup_file
         self.output("Successfully created .intunewin file", 1)
 
-        if not self.env.get('intunewin_disable_metadata_archive', True):
+        if self.env.get('intunewin_disable_metadata_archive'):
             self.output("Full Metadata archive creation disabled. Simply creating the encrypted archive.", 2)
             output_path = os.path.join(output_folder,'IntunePackage.intunewin')
             self.env['intunewin_filepath'] = output_path
