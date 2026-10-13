@@ -32,8 +32,8 @@ from IntuneLib.IntuneAppGetterBase import (  # pylint: disable=import-error, wro
 __all__ = ["IntuneAppGetter"]
 
 class IntuneAppGetter(IntuneAppGetterBase):
-    description = """AutoPkg Processor to connect to an MCM Admin
-    Service and retrieve an application object, if it exists
+    description = """AutoPkg Processor to connect to Intune 
+    and retrieve an application object, if it exists
     """
     input_variables = {
         "intune_app_keychain_service": {
@@ -57,13 +57,27 @@ class IntuneAppGetter(IntuneAppGetterBase):
             "required": True,
             "description": "The name of the application in MCM to search for."
         },
+        "use_beta_url": {
+            "required": False,
+            "description": (
+                "Some configuration arguments on an Intune app are only available "
+                "via the /beta endpoint. Use this argument to return data "
+                "from the beta url"
+            ),
+            "default": False,
+            "options": [
+                True,
+                False
+            ]
+        },
         "intune_app_getter_export_properties": {
             "required": False,
             "default": {
-                "existing_app_id": {"type": "property", "raise_error": False,"options": {"property": "id"}},
-                "existing_app_install_cli": {"type": "property", "raise_error": False,"options": {"property": "installCommandLine"}},
-                "existing_app_publishing_state": {"type": "property", "raise_error": False,"options": {"property": "publishingState"}},
-                "existing_app_content_version": {"type": "property", "raise_error": False,"options": {"property": "committedContentVersion"}},
+                "app_id": {"type": "property", "raise_error": False,"options": {"property": "id"}},
+                "app_install_cli": {"type": "property", "raise_error": False,"options": {"property": "installCommandLine"}},
+                "app_publishing_state": {"type": "property", "raise_error": False,"options": {"property": "publishingState"}},
+                "app_content_version": {"type": "property", "raise_error": False,"options": {"property": "committedContentVersion"}},
+                "odata_context": {"type": "property", "raise_error": False, "options": {"property":"@odata.context"}},
             },
             "description": 
                 "A dictionary specifying the properties to retrieve, and the AutoPkg variables to use to store the output. "
@@ -78,6 +92,9 @@ class IntuneAppGetter(IntuneAppGetterBase):
     output_variables = {
         "intune_application_found": {
             "description": "Returns True if the application was found in the Intune instance, otherwise, returns false."
+        },
+        "intune_application_url": {
+            "description": "Returns the url to the newly created/updated application"            
         }
     }
     

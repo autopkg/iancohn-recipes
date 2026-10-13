@@ -36,8 +36,6 @@ class IntuneAppGetterBase(IntuneProcessorBase):
     export properties
     """
     def initialize_all(self):
-        #self.initialize_headers()
-        #self.initialize_ssl_verification()
         self.initialize_auth()
         self.initialize_export_properties("intune_app_getter_export_properties")
         self.application_name = self.env.get('application_name')
@@ -45,9 +43,17 @@ class IntuneAppGetterBase(IntuneProcessorBase):
     def execute(self):
         self.env['intune_application_found'] = False
         self.initialize_all()
-        self.get_intune_app_by_name(self.application_name)
-        if self.response_value is not None and self.response_value != {}:
+
+        
+        search_result = self.get_intune_app_by_name(
+            self.application_name,
+            self.env.get('use_beta_url')
+            )
+        
+        if search_result is not None and len(search_result) == 2 and search_result[1] != {}:
             self.env['intune_application_found'] = True
+            self.env['intune_application_url'] = search_result[0]
+            self.response_value = search_result[1]
             self.set_export_properties()
         else:
             self.output("No application found; no export properties will be set", 3)

@@ -59,6 +59,8 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         mac_b64: str,
         file_digest_b64: str,
         tool_version: str = TOOL_VERSION,
+        profile_identifier: str = 'ProfileVersion1',
+        file_digest_algorithm: str = 'SHA256',
     ) -> str:
         """
         Generates Detection.xml matching the exact XML schema produced by Microsoft's Intune Content Prep Tool.
@@ -75,9 +77,9 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
             f'<MacKey>{mac_key_b64}</MacKey>\r\n'
             f'<InitializationVector>{iv_b64}</InitializationVector>\r\n'
             f'<Mac>{mac_b64}</Mac>\r\n'
-            f'<ProfileIdentifier>ProfileVersion1</ProfileIdentifier>\r\n'
+            f'<ProfileIdentifier>{profile_identifier}</ProfileIdentifier>\r\n'
             f'<FileDigest>{file_digest_b64}</FileDigest>\r\n'
-            f'<FileDigestAlgorithm>SHA256</FileDigestAlgorithm>\r\n'
+            f'<FileDigestAlgorithm>{file_digest_algorithm}</FileDigestAlgorithm>\r\n'
             f'</EncryptionInfo>\r\n'
             f'</ApplicationInfo>'
         )
@@ -94,7 +96,7 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         self.output("Creating .intunewin file", 1)
         self.output("Compressing source directory into inner ZIP archive", 3)
         unencrypted_zip = self.create_source_zip(source_folder)
-        
+
         # IntuneWinAppUtil sets UnencryptedContentSize to the byte length of the unencrypted inner ZIP payload
         self.env['intunewin_unencrypted_size'] = len(unencrypted_zip)
 
@@ -117,6 +119,8 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         mac_key_b64 = base64.b64encode(mac_key).decode("utf-8")
         iv_b64 = base64.b64encode(iv).decode("utf-8")
         mac_b64 = base64.b64encode(mac).decode("utf-8")
+        profile_identifier = 'ProfileVersion1'
+        file_digest_algorithm = 'SHA256'
 
         # IntuneWinAppUtil 48-byte binary header layout:
         # Bytes 0..31: HMAC-SHA256 signature (32 bytes)
@@ -133,10 +137,11 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
             mac_b64=mac_b64,
             file_digest_b64=file_digest_b64,
             tool_version=TOOL_VERSION,
+            profile_identifier=profile_identifier,
+            file_digest_algorithm=file_digest_algorithm
         )
 
         output_path = os.path.join(output_folder, output_filename)
-        self.output(f"Writing outer .intunewin package to {output_path}", 3)
 
         # Outer archive layout matching Microsoft Intune Content Prep Tool ZIP structure:
         # 1. Store mode (ZIP_STORED / Method 0) without secondary compression
@@ -144,11 +149,31 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
         # 3. UTF-8 BOM (\xef\xbb\xbf) prefix for Detection.xml matching .NET StreamWriter
         detection_bytes = b"\xef\xbb\xbf" + detection_xml.encode("utf-8")
 
+        self.env['intunewin_encryption_key'] = encryption_key
+        self.env['intunewin_mac_key'] = mac_key_b64
+        self.env['intunewin_mac'] = mac_b64
+        self.env['intunewin_initialization_vector'] = iv_b64
+        self.env['intunewin_file_digest'] = file_digest_b64
+        self.env['intunewin_file_digest_algorithm'] = file_digest_algorithm
+        self.env['intunewin_profile_identifier'] = profile_identifier
+        self.env['intunewin_setup_filename'] = setup_file
+        self.output("Successfully created .intunewin file", 1)
+
+        if not self.env.get('intunewin_disable_metadata_archive', True):
+            self.output("Full Metadata archive creation disabled. Simply creating the encrypted archive.", 2)
+            output_path = os.path.join(output_folder,'IntunePackage.intunewin')
+            self.env['intunewin_filepath'] = output_path
+            with open(output_path, "wb") as encrypted_zip:
+                encrypted_zip.write(packaged_content)
+            self.output("Done", 1)
+            return
+
+        self.output(f"Writing outer .intunewin package to {output_path}", 3)
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_STORED) as outer_zip:
             outer_zip.writestr("IntuneWinPackage/Contents/IntunePackage.intunewin", packaged_content)
             outer_zip.writestr("IntuneWinPackage/Metadata/Detection.xml", detection_bytes)
 
-        self.output("successfully created .intunewin file", 1)
+        self.env['intunewin_encrypted_filesize'] = os.path.getsize(output_path)
 
     def initialize_all(self):
         pass
@@ -175,6 +200,7 @@ class IntuneWinCreatorBase(IntuneProcessorBase):
                 output_filename=output_filename
             )
             self.env['intunewin_filepath'] = destination_filepath
+            
         except Exception as e:
             raise ProcessorError(f"Failed to create IntuneWin file: {e}")
 

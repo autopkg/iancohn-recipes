@@ -43,6 +43,14 @@ class IntuneWinCreator(IntuneWinCreatorBase):
             "required": True,
             "description": "The setup file included in the archive. Can be an MSI,PS1, or EXE file",
         },
+        "intunewin_disable_metadata_archive": {
+            "required": False,
+            "description": (
+                "Set this argument to True to skip wrapping "
+                "the encrypted archive with its metadata"
+            ),
+            "default": False
+        },
         "intunewin_output_filename": {
             "required": False,
             "description": (
@@ -62,15 +70,39 @@ class IntuneWinCreator(IntuneWinCreatorBase):
             "description": "If True, overwrite an existing file at the output location",
             "default": False,
         },
+
     }
     output_variables = {
         "intunewin_filepath": {
             "description": "The full path to the created file"
         },
         "intunewin_unencrypted_filesize": {
-            "description": "The filesize of the unencrypted intunewin archive"
+            "description": "The filesize of the inner intunewin archive prior to encrypting it"
         },
-
+        "intunewin_encrypted_filesize": {
+            "description": "The filesize of the inner intunewin archive following its encryption"
+        },
+        "intunewin_encryption_key": {
+            "description": "The encryption key for the generated intunewin file"
+        },
+        "intunewin_mac_key": {
+            "description": "The mac key for the generated intunewin file"
+        },
+        "intunewin_mac": {
+            "description": "The mac for the generated intunewin file"
+        },
+        "intunewin_initialization_vector": {
+            "description": "The initialization vector for the generated intunewin file"
+        },
+        "intunewin_file_digest": {
+            "description": "The file digest for the generated intunewin file"
+        },
+        "intunewin_file_digest_algorithm": {
+            "description": "The file digest algorithm for the generated intunewin file"
+        },
+        "intunewin_profile_identifier": {
+            "description": "The profile_identifier for the generated intunewin file"
+        },
     }
     
     __doc__ = description
