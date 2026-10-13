@@ -46,7 +46,9 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
     def execute(self):
         self.initialize_all()
 
-        existing_app = self.get_intune_app_by_name(self.application_name)
+        existing_app_response = self.get_intune_app_by_name(self.application_name)
+        if existing_app_response is not None and len(existing_app_response) == 2:
+            existing_app = existing_app_response[1]
         if existing_app != {} and False == self.env.get('update_existing_application', False):
             self.output(f"Application [{self.application_name}] already exists.", 3)
             raise ProcessorError("Cannot continue. If updating is desired, set update_existing_application to True")
@@ -167,6 +169,16 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
         else:
             icon_data = {}
 
+        
+        max_run_time = self.try_cast(type_name=int,value=self.env.get('max_run_time'),default=60)
+        install_experience = {
+            'runAsAccount': self.env.get('installation_runas'),
+            #'maxRunTimeInMinutes': max_run_time, # not supported on v1.0 endpoint
+            'deviceRestartBehavior': self.env.get('restart_behavior'),
+            #'inUseBehavior': None # not supported on v1.0 endpoint
+        }
+        self.output(json.dumps(install_experience))
+
         self.output("Collecting app payload", 2)
         app_payload = {
             '@odata.type': app_type,
@@ -179,14 +191,12 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             'uninstallCommandLine': self.env.get('application_uninstall_commandline'),
             'applicableArchitectures': self.env.get('applicable_architectures'),
             'minimumSupportedWindowsRelease': minimum_supported_os,
-            'displayVersion': self.env.get('application_display_version'),
-            'installExperience': {
-                'runAsAccount': self.env.get('installation_runas'),
-                'deviceRestartBehavior': self.env.get('restart_behavior'),
-            },
+            'displayVersion': str(self.env.get('application_display_version','0.1')),
+            'installExperience': install_experience,
             'detectionRules': detection_rules,
             'largeIcon': icon_data,
         }
+
         if len(requirement_rules) > 0:
             app_payload['requirementRules'] = requirement_rules,
         app_payload['rules'] = all_rules
@@ -195,6 +205,10 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             raise ProcessorError("Updating not supported yet.")
 
         new_app = self.new_intune_app(app_payload=app_payload)
+
+        # /beta items
+        # 
+        
         app_id = new_app['id']
 
         content_version = self.new_intune_app_content_version(application_id=app_id,odata_type_str=new_app['@odata.type'])
@@ -224,10 +238,13 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             profile_identifier = profile_identifier
         )
 
-        self.response_value = self.get_intune_app_by_name(application_name=self.application_name)
         
-        if self.response_value is not None and self.response_value != {}:
+        new_app = self.get_intune_app_by_name(application_name=self.application_name,use_beta_url=False)
+        
+        if new_app is not None and len(new_app) == 2 and new_app[1] != {}:
             self.env['intune_application_created'] = True
+            self.response_value = new_app[1]
+            self.intune_application_url = new_app[0]
             self.set_export_properties()
         else:
             self.output("No application found; no export properties will be set", 3)

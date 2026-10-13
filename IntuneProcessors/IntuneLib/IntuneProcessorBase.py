@@ -479,6 +479,9 @@ class IntuneProcessorBase(Processor):
         encryptor = cipher.encryptor()
         return encryptor.update(padded_data) + encryptor.finalize()
     @staticmethod
+    def get_api_version_from_url(url: str) -> str:
+        return url.lstrip(f"{GRAPH_BASE_URL}/").split('/',1)[0]
+    @staticmethod
     def new_file_encryption_info(
         encryption_key: str,
         mac_key: str,
@@ -551,9 +554,13 @@ class IntuneProcessorBase(Processor):
         filesize = int((string_len * 3) / 4) - padding
         return filesize
 
-    def get_intune_app_by_name(self,application_name : str):
+    def get_intune_app_by_name(self,application_name : str, use_beta_url : bool = False) -> tuple:
         self.output(f'Searching Intune for application with name [{application_name}]',3)
-        url = f"{GRAPH_BASE_URL}/v1.0/deviceAppManagement/mobileApps"
+        if use_beta_url:
+            api_version = 'beta'
+        else:
+            api_version = 'v1.0'
+        url = f"{GRAPH_BASE_URL}/{api_version}/deviceAppManagement/mobileApps"
         body = {"$filter": f"displayName eq '{application_name}'"}
         app_search_response = requests.request(
             method = 'GET', 
@@ -573,22 +580,19 @@ class IntuneProcessorBase(Processor):
                 )
         if len(app_search_response.json()['value']) == 0:
             self.output("No applications were found.", 2)
-            return {}
+            return None,{}
 
         app_search_value = app_search_response.json()['value'][0]
-
-        self.output("Getting fuller details", 3)
-        app_url = f"{GRAPH_BASE_URL}/beta/deviceAppManagement/mobileApps/{app_search_value['id']}"
-        app_response = requests.request(
-            method = 'GET',
-            url = app_url,
+        detail_url = f"{url}/{app_search_value['id']}"
+        self.output("Getting object details", 3)
+        detail_response = requests.request(
+            method = 'GET', 
+            url = detail_url, 
             headers = self.graph_headers(),
         )
-        if not app_response.ok:
-            app_response.raise_for_status()
-        
+
         self.output("Found application", 3)
-        return app_response.json()
+        return detail_url,detail_response.json()
     
     def get_scope_tags(self,name : str = None) -> list:
         url = f"{GRAPH_BASE_URL}/beta/deviceManagement/roleScopeTags"
@@ -685,7 +689,7 @@ class IntuneProcessorBase(Processor):
             headers = self.graph_headers(),
             json = app_payload
         )
-        
+        self.output(f"res:<{new_app_response.status_code}> {new_app_response.text}")
         new_app_response.raise_for_status()
         time.sleep(3.0)
         return new_app_response.json()

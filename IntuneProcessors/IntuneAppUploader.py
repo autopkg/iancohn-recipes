@@ -32,8 +32,8 @@ from IntuneLib.IntuneAppUploaderBase import (  # pylint: disable=import-error, w
 __all__ = ["IntuneAppUploader"]
 
 class IntuneAppUploader(IntuneAppUploaderBase):
-    description = """AutoPkg Processor to connect to an MCM Admin
-    Service and retrieve an application object, if it exists
+    description = """AutoPkg Processor to connect to Intune
+    and upload a new application object.
     """
     input_variables = {
         "intune_app_keychain_service": {
@@ -90,7 +90,7 @@ class IntuneAppUploader(IntuneAppUploaderBase):
         "max_run_time": {
             "required": False,
             "description": "The time (in minutes) needed to install the application",
-            "default": '20',
+            "default": '60',
         },
         "allow_uninstall": {
             "required": False,
@@ -198,6 +198,9 @@ class IntuneAppUploader(IntuneAppUploaderBase):
     output_variables = {
         "intune_application_created": {
             "description": "Returns True if the application was created successfully in the Intune instance, otherwise, returns false."
+        },
+        "intune_application_url": {
+            "description": "The url of the resulting intune object"
         }
     }
     
