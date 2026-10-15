@@ -1206,8 +1206,9 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
         }
         execution_context = BEHAVIOR_TYPE_TO_CONTEXT[deployment_type_configuration.get('Options', {}).get('InstallationBehaviorType', 'InstallForSystem')]
         if ['MSI', 'Script'].__contains__(install_action_params['provider']):
+            _install_program = deployment_type_configuration.get('Options', {}).get('InstallationProgram','').strip()
             install_action_params["args"] = [
-                self.new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('InstallationProgram')), 
+                self.new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = _install_program), 
                 self.new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('InstallationStartIn')), 
                 self.new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context)
             ]
@@ -1312,9 +1313,11 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
         }
         execution_context = BEHAVIOR_TYPE_TO_CONTEXT[deployment_type_configuration.get('Options', {}).get('InstallationBehaviorType', 'InstallForSystem')]
         if ['MSI', 'Script'].__contains__(uninstall_action_params['provider']):
+            _uninstall_program = deployment_type_configuration.get('Options', {}).get('UninstallProgram','').strip()
+            _uninstall_start_in = deployment_type_configuration.get('Options', {}).get('UninstallStartIn','').strip()
             uninstall_action_params["args"] = [
-                self.new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('UninstallProgram')), 
-                self.new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('UninstallStartIn')), 
+                self.new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = _uninstall_program), 
+                self.new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = _uninstall_start_in), 
                 self.new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context)
             ]
             #Logon Requirement
@@ -1418,9 +1421,11 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
         }
         execution_context = BEHAVIOR_TYPE_TO_CONTEXT[deployment_type_configuration.get('Options', {}).get('InstallationBehaviorType', 'InstallForSystem')]
         if ['MSI', 'Script'].__contains__(repair_action_params['provider']):
+            _repair_command_line = deployment_type_configuration.get('Options', {}).get('RepairProgram', '').strip()
+            _repair_start_in = deployment_type_configuration.get('Options', {}).get('RepairStartIn','').strip()
             repair_action_params["args"] = [
-                self.new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('RepairProgram')), 
-                self.new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = deployment_type_configuration.get('Options', {}).get('RepairStartIn')), 
+                self.new_arg(arg_name = 'InstallCommandLine', arg_type = 'String', arg_value = _repair_command_line), 
+                self.new_arg(arg_name = 'WorkingDirectory', arg_type = 'String', arg_value = _repair_start_in), 
                 self.new_arg(arg_name = 'ExecutionContext', arg_type = 'String', arg_value = execution_context)
             ]
             #Logon Requirement
@@ -1497,7 +1502,8 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
         custom_data_nodes = detection_nodes
         deployment_technology = deployment_type_configuration.get('Technology')
         if ['MSI', 'Script'].__contains__(deployment_technology):
-            custom_data_nodes.append(XmlNodeAsDict(NodeName = 'InstallCommandLine', NodeInnerText = deployment_type_configuration.get('Options', {}).get('InstallationProgram')))
+            _install_program = deployment_type_configuration.get('Options', {}).get('InstallationProgram','').strip()
+            custom_data_nodes.append(XmlNodeAsDict(NodeName = 'InstallCommandLine', NodeInnerText = _install_program))
         elif deployment_technology == 'TaskSequence':
             custom_data_nodes.append(XmlNodeAsDict(NodeName = 'InstallCommandLine', NodeInnerText = 'Task Sequence'))
         if deployment_type_configuration.get('Options', {}).get('Force32BitInstaller', False).__str__().lower() == 'true':
@@ -1516,8 +1522,8 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
                 uninstall_content = XmlNodeAsDict.instance_map_by_external_id[f"{id(uninstall_content_local)}"]
                 uninstall_content_id = uninstall_content.get_attribute_value(attribute_name = 'ContentId')
                 custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallContent', Attributes = [XmlAttributeAsDict(Name = 'ContentId', Value = uninstall_content_id), XmlAttributeAsDict(Name = 'Version', Value = '1')]))
-            uninstall_command_line = deployment_type_configuration.get('Options', {}).get('UninstallProgram', '')
-            uninstall_start_in = deployment_type_configuration.get('Options', {}).get('UninstallStartIn') or ''
+            uninstall_command_line = (deployment_type_configuration.get('Options', {}).get('UninstallProgram') or '').strip()
+            uninstall_start_in = (deployment_type_configuration.get('Options', {}).get('UninstallStartIn') or '').strip()
             if uninstall_command_line !=  '':
                 custom_data_nodes.append(XmlNodeAsDict(NodeName = 'UninstallCommandLine', NodeInnerText = uninstall_command_line))
             if uninstall_start_in.strip() !=  '':
