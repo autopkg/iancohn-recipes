@@ -822,27 +822,35 @@ class McmSDMPackageXMLGeneratorBase(McmApiBase):
     # Installer
     def new_process_information(self, process_name: str, process_display_name: str) -> XmlNodeAsDict:
         """Create a new process detection object"""
-        process_information = XmlNodeAsDict(
-            NodeName = 'ProcessInformation', Attributes = [
-                XmlAttributeAsDict(Name = 'Name', Value = process_name)
-            ], 
-            ChildNodes = [
-                XmlNodeAsDict(
-                    NodeName = 'DisplayInfo', Attributes = [
-                        XmlAttributeAsDict(Name = 'DefaultLanguage', Value = '')
-                    ], 
-                    ChildNodes = [
-                        XmlNodeAsDict(
-                            NodeName = 'Info', 
-                            Attributes = [
-                                XmlAttributeAsDict(Name = 'Language', Value = ''), 
-                                XmlAttributeAsDict(Name = 'DisplayName', Value = process_display_name)
-                            ]
-                        )
-                    ]
-                )
-            ]
-        )
+        # process_display_name is optional
+        if (process_display_name != None or process_display_name != ""):
+            process_information = XmlNodeAsDict(
+                NodeName = 'ProcessInformation', Attributes = [
+                    XmlAttributeAsDict(Name = 'Name', Value = process_name)
+                ], 
+                ChildNodes = [
+                    XmlNodeAsDict(
+                        NodeName = 'DisplayInfo', Attributes = [
+                            XmlAttributeAsDict(Name = 'DefaultLanguage', Value = '')
+                        ], 
+                        ChildNodes = [
+                            XmlNodeAsDict(
+                                NodeName = 'Info', 
+                                Attributes = [
+                                    XmlAttributeAsDict(Name = 'Language', Value = ''), 
+                                    XmlAttributeAsDict(Name = 'DisplayName', Value = process_display_name)
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            )
+        else:
+            process_information = XmlNodeAsDict(
+                NodeName = 'ProcessInformation', Attributes = [
+                    XmlAttributeAsDict(Name = 'Name', Value = process_name)
+                ]
+            )
         return process_information
 
     def new_install_process_detection(self, process_information: list[XmlNodeAsDict]) -> XmlNodeAsDict:
