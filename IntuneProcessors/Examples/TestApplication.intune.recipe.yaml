@@ -1,0 +1,142 @@
+Description: |
+  Package a folder of content into a .intunewin file and upload it to
+  Intune as a new Win32 application.
+Identifier: com.github.iancohn.intune.TestApplication
+MinimumVersion: "2.7.6"
+#ParentRecipe: com.github.iancohn.download.NotepadPlusPlus-Win
+Input:
+  NAME: TestApplication
+  COMPANY: AppVendorCompany
+Process:
+  - Processor: PkgRootCreator
+    Arguments:
+      pkgroot: "%RECIPE_CACHE_DIR%/MyApp"
+      pkgdirs: {}
+  - Processor: FileCreator
+    Arguments:
+      file_path: "%RECIPE_CACHE_DIR%/MyApp/Write-File.ps1"
+      file_content: |
+        New-Item -Path $env:SystemRoot\Here.txt -ItemType File -Value "Some Content"
+  - Processor: com.github.iancohn.intuneprocessors/IntuneWinCreator
+    Arguments:
+      intunewin_source_folder: "%RECIPE_CACHE_DIR%/MyApp"
+      intunewin_setup_file: Write-File.ps1
+      intunewin_disable_metadata_archive: True
+      intunewin_output_filename: "WriteFile-0.1"
+      intunewin_output_folder: "%RECIPE_CACHE_DIR%"
+      intunewin_overwrite: True
+  - Processor: com.github.iancohn.intuneprocessors/IntuneAppUploader
+    Arguments: 
+      #intune_app_keychain_service: com.github.autopkg.iancohn-recipes/intuneprocessors
+      intune_app_keychain_username: IntuneProcessorTesting
+      intune_app_client_id: <your client id>
+      intune_tenant_id: <your tenant id>
+      #application_type: Win32LobApp
+      application_name: Test Application
+      application_description: This is a sample application
+      application_publisher: "%COMPANY%"
+      application_icon_unix_path: /path/to/icon.png
+      application_install_commandline: '%SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File Write-File.ps1'
+      #application_uninstall_commandline: cmd /c
+      max_run_time: 110 #Default: 60
+      allow_uninstall: True # Default: False
+      is_featured: True # Default: False
+      restart_behavior: suppress
+      privacy_url: https://localhost.privacy.url/
+      information_url: https://localhost.url/
+      owner: SomeOwner
+      developer: Some Developer
+      notes: "Created by AutoPkg <RECIPE_IDENTIFIER>"
+      allowed_architectures: x64,arm64 # Default: x86,x64,arm64
+      minimum_diskspace_mb: 10000 # Default: Null
+      minimum_memory_mb: 2048 # Default: Null
+      minimum_processors: 4 # Default: Null
+      minimum_cpuspeed_mhz: 1200 # Default: Null
+      installation_runas: system # system, user
+      #application_setup_filename: "%intunewin_setup_filename%"
+      minimum_supported_os: "1607"
+      application_display_version: '0.1'
+      detection_rules:
+        -
+          rule_short_odata_type: Win32LobAppFileSystemRule
+          options:
+            path: "%SYSTEMROOT%"
+            operation_type: exists
+            operator: notConfigured
+            comparison_value: Null
+            filesystem_object_name: Here.txt
+            check_x32_on_x64: False
+        -
+          rule_short_odata_type: Win32LobAppFileSystemRule
+          options:
+            path: "%SYSTEMROOT%"
+            operation_type: doesNotExist
+            operator: notConfigured
+            comparison_value: Null
+            filesystem_object_name: Here.txt
+            check_x32_on_x64: False
+        #- 
+        #  type: 
+        #  options: 
+      #update_existing_application: False # updates not supported yet.
+      #intune_filepath: "%intunewin_filepath%"
+      #intune_setup_filepath: "%intunewin_setup_file%"
+      #unencrypted_filesize: "%intunewin_unencrypted_filesize%"
+      #encrypted_filesize: "%intunewin_encrypted_filesize%"
+      #encryption_key: "%intunewin_encryption_key%"
+      #mac_key: "%intunewin_mac_key%"
+      #mac: "%intunewin_mac%"
+      #initialization_vector: "%intunewin_initialization_vector%"
+      #file_digest: "%intunewin_file_digest%"
+      #file_digest_algorithm: "%intunewin_file_digest_algorithm%"
+      #description: "%intunewin_profile_identifier%"
+      #intune_app_uploader_export_properties: 
+      #    new_app_id: 
+      #      type: property
+      #      raise_error: False
+      #      options: 
+      #        property: id
+      #    new_app_install_cli: 
+      #      type: property
+      #      raise_error: False
+      #      options: 
+      #        property: installCommandLine
+      #    new_app_publishing_state: 
+      #      type: property
+      #      raise_error: False
+      #      options: 
+      #        property: publishingState
+      #    new_app_content_version:
+      #      type: property
+      #      raise_error: False
+      #      options: 
+      #        property: committedContentVersion
+      return_codes:
+        -
+          return_code: 9999
+          type: 'success'
+        -
+          return_code: 8888
+          type: 'softReboot'
+        -
+          return_code: 7777
+          type: 'hardReboot'
+        -
+          return_code: 6666
+          type: 'retry'
+        - 
+          return_code: 5555
+          type: 'failed'
+      keep_default_return_codes: True
+          
+  - Processor: com.github.iancohn.intuneprocessors/IntuneScopeSetter
+    Arguments:
+      #intune_app_keychain_service: # Specified above
+      #intune_app_keychain_username: # Specified above
+      #intune_app_client_id: # Specified above
+      #intune_tenant_id: # Specified above
+      object_type: Win32LobApp
+      object_url: "%intune_application_url%"
+      action: add
+      scope_names:
+        - S9
