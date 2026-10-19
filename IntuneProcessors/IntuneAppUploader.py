@@ -74,6 +74,14 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "required": True,
             "description": "The publisher of the application"
         },
+        "is_featured": {
+            "required": False,
+            "description": (
+                "Whether the application should be 'featured' in Company Portal "
+                "on targeted systems"
+                ),
+            "default": False,
+        },
         "application_icon_unix_path": {
             "required": False,
             "description": "A local unix path to a local icon file to use for the application."
@@ -109,6 +117,57 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "default": "system",
             "options": ['system','user']
         },
+        "privacy_url": {
+            "required": False,
+            "description": "Publish the vendor's privacy policy URL for users to review when installling the application",
+            "default": None,
+        },
+        "information_url": {
+            "required": False,
+            "description": "Publish the vendor's information URL for users to review when installling the application",
+            "default": None,
+        },
+        "owner": {
+            "required": False,
+            "description": "The owner of the application object in Intune. Generally this is the name or user id for the person who maintains the Intune application",
+            "default": None,
+        },
+        "developer": {
+            "required": False,
+            "description": "The name of the application's developer",
+            "default": None,
+        },
+        "notes": {
+            "required": False,
+            "description": "Internal notes to attach to the application. These are NOT user facing",
+            "default": None,
+        },
+        "allowed_architectures": {
+            "required": False,
+            "description": "Lock the application to a comma separated string of particular architectures of device",
+            "default": None,
+            "options": ["x86,arm64,x64"],
+        },
+        "minimum_diskspace_mb": {
+            "required": False,
+            "description": "The minimum amount of free disk space required to install",
+            "default": None,
+        },
+        "minimum_memory_mb": {
+            "required": False,
+            "description": "The minimum amount of installed RAM required to install",
+            "default": None,
+        },
+        "minimum_processors": {
+            "required": False,
+            "description": "The minimum number of processors required to install",
+            "default": None,
+        },
+        "minimum_cpuspeed_mhz": {
+            "required": False,
+            "description": "The minimum CPU speed required to install",
+            "default": None,
+        },
         #"application_setup_filename": {
         #    "required": False,
         #    "description": "The file name of the setup file. Defaults to intunewin_setup_filename",
@@ -118,10 +177,14 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "description": "The minimum OS this application can install to.",
             "default": "1607",
         },
-        "applicable_architectures": {
+        #"applicable_architectures": {
+        #    "required": False,
+        #    "description": "The os architectures to which this application can install",
+        #    "default": 'x64,arm64,x86',
+        #},
+        "required_architectures": {
             "required": False,
-            "description": "The os architectures to which this application can install",
-            "default": 'x64,arm64,x86',
+            "description": "Requires that targeted systems be of one of the indicated architectures"
         },
         "application_display_version": {
             "required": False,
@@ -129,8 +192,28 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "default": ''
         },
         "detection_rules": {
+            "required": True,
+            "description": (
+                "An array of detection rules to apply to the application. "
+                "At least one detection rule should be specified. If using"
+                "PowerShell script detection, ONLY ONE rule can be specified"
+                ),
+        },
+        "requirement_rules": {
             "required": False,
-            "description": "An array of detection rules to apply to the application"
+            "description": "An array of requirement rules to apply to the application",
+            "default": [],
+        },
+        "return_codes": {
+            "required": False,
+            "description": ("An array of return code configurations to assign to the application. "
+                ' [{"return_code": 1707, "type": "success"}]'),
+            "default": [],
+        },
+        "keep_default_return_codes": {
+            "required": False,
+            "description": "If return_codes is specified, whether or not to keep the default return codes",
+            "default": True,
         },
         "update_existing_application": {
             "required": False,

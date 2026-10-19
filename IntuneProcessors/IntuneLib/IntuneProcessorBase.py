@@ -464,8 +464,8 @@ class IntuneProcessorBase(Processor):
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             for root, _, files in os.walk(source_folder):
                 for file in files:
-                    if file.startswith("."):
-                        continue  # Ignore OS hidden files (.DS_Store, etc.)
+                    #if file.startswith("."):
+                    #    continue  # Ignore OS hidden files (.DS_Store, etc.)
                     abs_path = os.path.join(root, file)
                     rel_path = os.path.relpath(abs_path, source_folder)
                     posix_path = rel_path.replace("\\", "/")
@@ -689,10 +689,28 @@ class IntuneProcessorBase(Processor):
             headers = self.graph_headers(),
             json = app_payload
         )
-        self.output(f"res:<{new_app_response.status_code}> {new_app_response.text}")
+
         new_app_response.raise_for_status()
         time.sleep(3.0)
         return new_app_response.json()
+
+    def update_intune_app_beta(self, app_payload, app_id, raise_error : bool = False) -> dict:
+        "Send a PATCH request to the Intune app via the /beta endpoint"
+        app_url = f"{GRAPH_BASE_URL}/beta/deviceAppManagement/mobileApps/{app_id}"
+        self.output("Sending PATCH request for application.", 2)
+        self.output(f"{json.dumps(app_payload)}", 4)
+        patch_response = requests.patch(
+            url = app_url,
+            headers = self.graph_headers(),
+            json = app_payload,
+        )
+        if True != patch_response.ok and raise_error:
+            self.output(f"<{patch_response.status_code}> {patch_response.text}")
+            patch_response.raise_for_status()
+        
+        self.output(f"PATCH Succeeded: {patch_response.ok}", 3)
+        
+        return
 
     def new_intune_app_content_version(self,application_id, odata_type_str : str) -> int:
         _odata_type_str = odata_type_str.lstrip('#')
@@ -880,11 +898,12 @@ class IntuneProcessorBase(Processor):
             application_id : str,
             odata_type_str : str,
             content_version_id : int,
+            encrypted_size : int,
             unencrypted_size : int,
             wait: bool = True
             ) -> dict:
         file_name = os.path.basename(file_path)
-        file_size = os.path.getsize(file_path)
+        #file_size = os.path.getsize(file_path)
         file_ext = os.path.splitext(file_path)[1]
         if not file_ext.lower() == '.intunewin':
             raise ProcessorError(f'Only IntuneWin files are supported. Not [{file_ext}]')
@@ -892,7 +911,7 @@ class IntuneProcessorBase(Processor):
             '@odata.type': '#microsoft.graph.mobileAppContentFile',
             'name': file_name,
             'size': unencrypted_size,
-            'sizeEncrypted': file_size #IntuneWin files are pre-encrypted
+            'sizeEncrypted': encrypted_size #IntuneWin files are pre-encrypted
         }
         url = f"{GRAPH_BASE_URL}/v1.0/deviceAppManagement/mobileApps/{application_id}/{odata_type_str.lstrip('#')}/contentVersions/{str(content_version_id)}/files"
         self.output(f"Posting file metadata", 3)
@@ -902,6 +921,7 @@ class IntuneProcessorBase(Processor):
             headers = self.graph_headers(),
             json = file_payload,
         )
+        self.output(f"Status: <{response.status_code}> {response.text}", 4)
         if not response.ok:
             response.raise_for_status()
         if False == wait:
@@ -1001,6 +1021,7 @@ class IntuneProcessorBase(Processor):
             headers = self.graph_headers(),
             json = commit_payload,
         )
+        self.output(f"<{commit_post.status_code}> {commit_post.text}", 3)
         commit_post.raise_for_status()
         time.sleep(3.0)
         self.output("Waiting for commit success", 3)

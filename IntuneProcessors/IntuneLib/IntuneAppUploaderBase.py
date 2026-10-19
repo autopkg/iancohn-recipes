@@ -25,7 +25,6 @@ from autopkglib import (  # pylint: disable=import-error
 # imports require noqa comments for E402
 import os.path
 import sys
-import json
 
 sys.path.insert(0,os.path.dirname(__file__))
 from IntuneLib.IntuneProcessorBase import ( #noqa: E402
@@ -55,6 +54,8 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
         
         self.output("Examining filepath", 2)
         filepath = self.env.get('intune_filepath', self.env.get('intunewin_filepath',''))
+        if filepath == '':
+            raise ProcessorError("filepath must not be empty.")
         filename = os.path.basename(filepath)
         if filepath.strip() == '':
             raise ProcessorError("intune_filepath cannot be blank")
@@ -75,7 +76,6 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             self.env.get('intunewin_unencrypted_filesize')
             )
         unencrypted_filesize = self.try_cast(type_name = int,value = _unencrypted_filesize)
-
         _encrypted_filesize = self.env.get(
             'encrypted_filesize',
             self.env.get('intunewin_encrypted_filesize')
@@ -161,48 +161,81 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
         else:
             icon_data = {}
         
-        max_run_time = self.try_cast(type_name=int,value=self.env.get('max_run_time'),default=60)
-
         install_experience = {
             'runAsAccount': self.env.get('installation_runas'),
             #'maxRunTimeInMinutes': max_run_time, # not supported on v1.0 endpoint
             'deviceRestartBehavior': self.env.get('restart_behavior'),
             #'inUseBehavior': None # not supported on v1.0 endpoint
         }
-        self.output(json.dumps(install_experience))
 
+        # Return Codes
+        default_return_codes = {
+            0: "success",
+            1707: "success",
+            3010: "softReboot",
+            1641: "hardReboot",
+            1618: "retry"
+        }
+        if self.env.get('keep_default_return_codes'):
+            return_codes = dict(default_return_codes)
+        else:
+            return_codes = {}
+        
+        for rc in self.env.get('return_codes',[]):
+            return_codes[rc.get('return_code')] = rc['type']
+
+        return_codes_list = []
+        for crc in return_codes.items():
+            return_codes_list.append({'returnCode':crc[0],'type':crc[1]})
+        
         self.output("Collecting app payload", 2)
         app_payload = {
             '@odata.type': app_type,
             'displayName': self.env.get('application_name'),
             'description': self.env.get('application_description'),
             'publisher': self.env.get('application_publisher'),
+            'isFeatured': self.env.get('is_featured'),
             'setupFilePath': self.env.get('intune_setup_filepath', self.env.get('intunewin_setup_file', 'setup.exe')),
             'fileName': filename,
             'installCommandLine': self.env.get('application_install_commandline'),
             'uninstallCommandLine': self.env.get('application_uninstall_commandline'),
             'applicableArchitectures': self.env.get('applicable_architectures'),
             'minimumSupportedWindowsRelease': minimum_supported_os,
-            'displayVersion': str(self.env.get('application_display_version','0.1')),
+            'displayVersion': str(self.env.get('application_display_version','')),
             'installExperience': install_experience,
             'detectionRules': detection_rules,
             'largeIcon': icon_data,
+            'returnCodes': return_codes_list,
         }
+        empty_str_null = ['',None]
+        if False == empty_str_null.__contains__(self.env.get('privacy_url')):
+            app_payload['privacyInformationUrl'] = str(self.env.get('privacy_url'))
+        if False == empty_str_null.__contains__(self.env.get('information_url')):
+            app_payload['informationUrl'] = str(self.env.get('information_url'))
+        if False == empty_str_null.__contains__(self.env.get('owner')):
+            app_payload['owner'] = str(self.env.get('owner'))
+        if False == empty_str_null.__contains__(self.env.get('developer')):
+            app_payload['developer'] = str(self.env.get('developer'))
+        if False == empty_str_null.__contains__(self.env.get('notes')):
+            app_payload['notes'] = str(self.env.get('notes'))
+        if False == empty_str_null.__contains__(self.env.get('allowed_architectures')):
+            app_payload['allowedArchitectures'] = str(self.env.get('allowed_architectures'))
+        if False == empty_str_null.__contains__(self.env.get('minimum_diskspace_mb')):
+            app_payload['minimumFreeDiskSpaceInMB'] = int(self.env.get('minimum_diskspace_mb'))
+        if False == empty_str_null.__contains__(self.env.get('minimum_memory_mb')):
+            app_payload['minimumMemoryInMB'] = int(self.env.get('minimum_memory_mb'))
+        if False == empty_str_null.__contains__(self.env.get('minimum_processors')):
+            app_payload['minimumNumberOfProcessors'] = int(self.env.get('minimum_processors'))
+        if False == empty_str_null.__contains__(self.env.get('minimum_cpuspeed_mhz')):
+            app_payload['minimumCpuSpeedInMHz'] = int(self.env.get('minimum_cpuspeed_mhz'))
 
         if len(requirement_rules) > 0:
             app_payload['requirementRules'] = requirement_rules,
         app_payload['rules'] = all_rules
 
-        if False:
-            raise ProcessorError("Updating not supported yet.")
-
         new_app = self.new_intune_app(app_payload=app_payload)
-
-        # /beta items
-        # 
-        
         app_id = new_app['id']
-
+        
         content_version = self.new_intune_app_content_version(application_id=app_id,odata_type_str=new_app['@odata.type'])
         
         sas_uri = self.new_azure_blob_sas_uri(
@@ -210,7 +243,7 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             application_id=app_id,
             odata_type_str=new_app['@odata.type'],
             content_version_id=content_version,
-            encrypted_filesize=encrypted_filesize,
+            encrypted_size=encrypted_filesize,
             unencrypted_size=unencrypted_filesize,
             wait=True
             )
@@ -231,13 +264,43 @@ class IntuneAppUploaderBase(IntuneProcessorBase):
             profile_identifier = profile_identifier
         )
 
+        # /beta items
+        # 
+        beta_payload = {
+            '@odata.type': app_type,
+        }
+        has_beta = False
+        # Max Run Time
+        default_max_run_time = self.input_variables['max_run_time']['default']
+        max_run_time = self.try_cast(type_name=int,value=self.env.get('max_run_time'),default=default_max_run_time)
+        if default_max_run_time != max_run_time:
+            self.output("Non-default maximum runtime has been set. ", 3)
+            has_beta = True
+            install_experience['maxRunTimeInMinutes'] = max_run_time
+            install_experience['inUseBehavior'] = None
+            beta_payload['installExperience'] = install_experience
+
+        # Display Version
+        display_version = self.env.get('application_display_version','')
+        if display_version.strip() != '':
+            self.output("Display Version has been set.", 3)
+            has_beta = True
+            beta_payload['displayVersion'] = display_version.strip()
+
+        if has_beta:
+            self.update_intune_app_beta(
+                app_payload=beta_payload,
+                app_id=app_id,
+                raise_error=True
+                )
+
         
         new_app = self.get_intune_app_by_name(application_name=self.application_name,use_beta_url=False)
-        
+        self.output(f"Intune app url: {new_app[0]}")
         if new_app is not None and len(new_app) == 2 and new_app[1] != {}:
             self.env['intune_application_created'] = True
             self.response_value = new_app[1]
-            self.intune_application_url = new_app[0]
+            self.env['intune_application_url'] = new_app[0]
             self.set_export_properties()
         else:
             self.output("No application found; no export properties will be set", 3)

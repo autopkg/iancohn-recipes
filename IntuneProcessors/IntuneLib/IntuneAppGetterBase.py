@@ -25,6 +25,7 @@ from autopkglib import (  # pylint: disable=import-error
 # imports require noqa comments for E402
 import os.path
 import sys
+import json
 
 sys.path.insert(0,os.path.dirname(__file__))
 from IntuneLib.IntuneProcessorBase import ( #noqa: E402
@@ -54,6 +55,7 @@ class IntuneAppGetterBase(IntuneProcessorBase):
             self.env['intune_application_found'] = True
             self.env['intune_application_url'] = search_result[0]
             self.response_value = search_result[1]
+            self.output(f"{json.dumps(self.response_value)}", 4)
             self.set_export_properties()
         else:
             self.output("No application found; no export properties will be set", 3)
