@@ -689,7 +689,6 @@ class IntuneProcessorBase(Processor):
             headers = self.graph_headers(),
             json = app_payload
         )
-
         new_app_response.raise_for_status()
         time.sleep(3.0)
         return new_app_response.json()

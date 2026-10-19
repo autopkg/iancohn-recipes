@@ -177,11 +177,11 @@ class IntuneAppUploader(IntuneAppUploaderBase):
             "description": "The minimum OS this application can install to.",
             "default": "1607",
         },
-        #"applicable_architectures": {
-        #    "required": False,
-        #    "description": "The os architectures to which this application can install",
-        #    "default": 'x64,arm64,x86',
-        #},
+        "applicable_architectures": {
+            "required": False,
+            "description": "The os architectures to which this application can install",
+            "default": 'x64,arm64,x86',
+        },
         "required_architectures": {
             "required": False,
             "description": "Requires that targeted systems be of one of the indicated architectures"

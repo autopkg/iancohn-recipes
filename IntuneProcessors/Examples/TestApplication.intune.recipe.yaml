@@ -66,6 +66,7 @@ Process:
             comparison_value: Null
             filesystem_object_name: Here.txt
             check_x32_on_x64: False
+      requirement_rules:
         -
           rule_short_odata_type: Win32LobAppFileSystemRule
           options:
