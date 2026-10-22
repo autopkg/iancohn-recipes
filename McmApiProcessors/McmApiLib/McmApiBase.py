@@ -50,7 +50,7 @@ import dns.resolver
 import keyring
 import requests
 import smbclient
-from requests_gssapi import HTTPKerberosAuth, OPTIONAL
+from requests_gssapi import HTTPSPNEGOAuth, OPTIONAL
 from lxml import etree
 
 
@@ -1235,16 +1235,18 @@ class McmApiBase(Processor):
         _ = self.get_mcm_gss_auth()
     
     def get_mcm_gss_auth(self):
-        """Construct a HTTPKerberosAuth auth object from the retrieved
+        """Construct a HTTPSPNEGOAuth auth object from the retrieved
         details
         """
         
         if self.__getattribute__('auth') is not None and \
-            isinstance(self.auth, HTTPKerberosAuth):
+            isinstance(self.auth, HTTPSPNEGOAuth):
             return self.auth
         self.output("GSSAPI Auth object does not currently exist. It will be created", 2)
         try:
-            self.auth = HTTPKerberosAuth(mutual_authentication=OPTIONAL)
+            self.auth = HTTPSPNEGOAuth(
+                mutual_authentication=OPTIONAL,
+                channel_bindings='tls-server-end-point')
             return self.auth
         except Exception as e:
             raise LookupError(f"Failed to retrieve credentials: {e}")
