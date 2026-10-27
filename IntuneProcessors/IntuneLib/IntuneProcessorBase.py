@@ -392,7 +392,8 @@ class IntunePowerShellScriptRule(IntuneRule):
         self['runAsAccount'] = None if rule_type == 'detection' else _run_as_account.value
         self['scriptContent'] = script_content_b64
         self['operationType'] = 'notConfigured' if rule_type == 'detection' else _operation_type.value
-        self['operator'] = _operator.value
+        if rule_type != 'detection':
+            self['operator'] = _operator.value
         self['comparisonValue'] = None if rule_type == 'detection' else _comparison_value
 
     def get_detection_rule(self) -> dict:
